@@ -1,0 +1,8 @@
+# requirements_pc.txt
+google-generativeai
+SpeechRecognition
+gTTS
+pydub
+pvporcupine
+pyaudio
+python-dotenv
