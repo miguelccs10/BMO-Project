@@ -62,11 +62,16 @@ async def handle_audio(websocket, path):
         print(f"Ocorreu um erro inesperado: {e}")
 
 # --- Ponto de Entrada do Servidor ---
-if __name__ == "__main__":
+# --- Ponto de Entrada do Servidor ---
+async def main():
+    """Função principal para iniciar o servidor."""
     # O endereço "0.0.0.0" permite que qualquer dispositivo na sua rede se conecte
-    start_server = websockets.serve(handle_audio, "0.0.0.0", 8765)
     print("Servidor WebSocket escutando na porta 8765...")
-    
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(start_server)
-    loop.run_forever()
+    async with websockets.serve(handle_audio, "0.0.0.0", 8765):
+        await asyncio.Future()  # Roda para sempre
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nServidor BMO desligado.")
