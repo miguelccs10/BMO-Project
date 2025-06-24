@@ -1,26 +1,31 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>BMO Web Client</title>
     <style>
-        body { font-family: sans-serif; background: #333; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
-        #status { margin-bottom: 20px; font-size: 1.2em; height: 2em;}
-        button { padding: 20px; font-size: 1.5em; border-radius: 50%; width: 150px; height: 150px; border: 5px solid; cursor: pointer; transition: all 0.2s; }
-        #recordBtn { border-color: #4CAF50; background-color: #2E7D32; color: white; }
-        #recordBtn.recording { border-color: #F44336; background-color: #C62828; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(244, 67, 54, 0); } 100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); } }
+        :root { --bmo-green: #37BDAA; --bmo-dark: #2c3e50; --bmo-red: #e74c3c; --bmo-blue: #3498db; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bmo-dark); color: #ecf0f1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+        .container { display: flex; flex-direction: column; align-items: center; gap: 15px; padding: 20px; }
+        #status { font-size: 1.1em; height: 2.5em; display: flex; align-items: center; justify-content: center; }
+        #pi_ip { padding: 10px; font-size: 1em; width: 200px; border-radius: 5px; border: 1px solid #7f8c8d; }
+        .button { padding: 10px 20px; font-size: 1em; border-radius: 8px; border: none; cursor: pointer; transition: background-color 0.2s; color: white; }
+        #connectBtn { background-color: var(--bmo-blue); }
+        #recordBtn { font-size: 2.5em; border-radius: 50%; width: 120px; height: 120px; border: 5px solid var(--bmo-green); background-color: transparent; color: var(--bmo-green); }
+        #recordBtn:disabled { border-color: #7f8c8d; color: #7f8c8d; }
+        #recordBtn.recording { border-color: var(--bmo-red); color: var(--bmo-red); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); } 70% { box-shadow: 0 0 0 25px rgba(231, 76, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); } }
     </style>
 </head>
 <body>
-    <h1>BMO Web Client</h1>
-    <div id="status">Insira o IP da Pi e conecte.</div>
-    <input type="text" id="pi_ip" placeholder="Ex: 192.168.1.42" style="margin-bottom: 10px; padding: 5px; font-size: 1em;">
-    <button id="connectBtn" style="width: auto; height: auto; border-radius: 10px; padding: 10px 20px; font-size: 1em;">Conectar</button>
-    <br><br>
-    <button id="recordBtn" disabled>🎤</button>
+    <div class="container">
+        <h2>BMO</h2>
+        <div id="status">Insira o IP da Pi e conecte.</div>
+        <input type="text" id="pi_ip" placeholder="Ex: 192.168.1.42">
+        <button id="connectBtn" class="button">Conectar</button>
+        <button id="recordBtn" disabled>🎤</button>
+    </div>
 
     <script>
         const statusDiv = document.getElementById('status');
@@ -28,72 +33,87 @@
         const recordBtn = document.getElementById('recordBtn');
         const piIpInput = document.getElementById('pi_ip');
 
+        // Carrega o último IP salvo para conveniência
+        piIpInput.value = localStorage.getItem('bmo_pi_ip') || '';
+
         let websocket;
         let mediaRecorder;
         let audioChunks = [];
+
+        const setUIState = (isConnected, isRecording, isProcessing) => {
+            connectBtn.disabled = isConnected;
+            piIpInput.disabled = isConnected;
+            recordBtn.disabled = !isConnected || isProcessing;
+            if (isRecording) {
+                recordBtn.classList.add('recording');
+                statusDiv.textContent = "Gravando... Toque para parar.";
+            } else {
+                recordBtn.classList.remove('recording');
+            }
+        };
 
         connectBtn.onclick = () => {
             const pi_ip = piIpInput.value.trim();
             if (!pi_ip) { alert("Por favor, insira o endereço IP da Raspberry Pi."); return; }
             
+            localStorage.setItem('bmo_pi_ip', pi_ip); // Salva o IP
             const ws_url = `ws://${pi_ip}:8765`;
             statusDiv.textContent = `Conectando a ${ws_url}...`;
             websocket = new WebSocket(ws_url);
 
             websocket.onopen = () => {
-                statusDiv.textContent = "Conectado! Pressione 🎤 para gravar.";
-                recordBtn.disabled = false;
-                connectBtn.disabled = true;
-                piIpInput.disabled = true;
+                statusDiv.textContent = "Conectado! Toque em 🎤 para gravar.";
+                setUIState(true, false, false);
             };
 
             websocket.onmessage = (event) => {
-                statusDiv.textContent = "Recebendo resposta...";
+                statusDiv.textContent = "BMO está respondendo...";
                 const audioBlob = new Blob([event.data], { type: 'audio/mpeg' });
                 const audioUrl = URL.createObjectURL(audioBlob);
                 const audio = new Audio(audioUrl);
                 audio.play();
-                audio.onended = () => { statusDiv.textContent = "Conectado! Pressione 🎤 para gravar."; };
+                audio.onended = () => { setUIState(true, false, false); statusDiv.textContent = "Conectado! Toque em 🎤 para gravar."; };
             };
 
             websocket.onclose = () => {
-                statusDiv.textContent = "Desconectado. Atualize e tente de novo.";
-                recordBtn.disabled = true;
-                connectBtn.disabled = false;
-                piIpInput.disabled = false;
+                statusDiv.textContent = "Desconectado. Verifique o servidor e atualize.";
+                setUIState(false, false, false);
             };
             
             websocket.onerror = (error) => {
-                statusDiv.textContent = "Erro de conexão. Verifique o IP.";
+                statusDiv.textContent = "Erro na conexão. Verifique o IP e o console.";
                 console.error("WebSocket Error: ", error);
+                setUIState(false, false, false);
             };
         };
 
         recordBtn.onclick = () => {
             if (mediaRecorder && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
-                recordBtn.classList.remove('recording');
-                statusDiv.textContent = "Enviando para o BMO...";
             } else {
                 navigator.mediaDevices.getUserMedia({ audio: true })
                     .then(stream => {
+                        // O formato 'audio/webm' é amplamente suportado
                         mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
                         mediaRecorder.start();
                         audioChunks = [];
-                        recordBtn.classList.add('recording');
-                        statusDiv.textContent = "Gravando... Pressione para parar.";
+                        setUIState(true, true, false);
 
                         mediaRecorder.addEventListener("dataavailable", event => { audioChunks.push(event.data); });
                         mediaRecorder.addEventListener("stop", () => {
                             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                            statusDiv.textContent = "Enviando para o BMO...";
+                            setUIState(true, false, true); // Bloqueia o botão enquanto processa
                             websocket.send(audioBlob);
                         });
                     }).catch(err => {
-                        statusDiv.textContent = "Erro ao acessar microfone.";
+                        statusDiv.textContent = "Erro ao acessar microfone. Verifique as permissões.";
                         console.error("getUserMedia error:", err);
                     });
             }
         };
+        
+        setUIState(false, false, false); // Estado inicial
     </script>
 </body>
 </html>
