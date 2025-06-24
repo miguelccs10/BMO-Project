@@ -5,3 +5,4 @@ pydub
 pyaudio
 python-dotenv
 websockets
+Pillow 
