@@ -18,7 +18,7 @@ class WakeWordDetector:
 
             model_file_path = os.path.join(model_dir, 'porcupine_params_pt.pv')
 
-            keyword_paths = [os.path.join(os.path.dirname(__file__), '..', 'picovoice_models', 'Ei BMO.ppn')]
+            keyword_paths = [os.path.join(os.path.dirname(__file__), '..', 'picovoice_models', 'Ei-Bimo-raspberry.ppn')]
 
             self.porcupine = pvporcupine.create(
                 access_key=config.PICOVOICE_ACCESS_KEY,

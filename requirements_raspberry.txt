@@ -1,0 +1,10 @@
+google-generativeai
+SpeechRecognition
+gTTS
+pydub
+pvporcupine
+pyaudio
+python-dotenv
+RPi.GPIO
+adafruit-circuitpython-ssd1306
+Pillow

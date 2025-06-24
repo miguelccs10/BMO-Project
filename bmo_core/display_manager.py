@@ -1,22 +1,15 @@
 # bmo_core/display_manager.py
+# VERSÃO COMPLETA PARA RASPBERRY PI
 
-try:
-    import board
-    import adafruit_ssd1306
-    from PIL import Image, ImageDraw, ImageFont
-    IS_HARDWARE_AVAILABLE = True
-except ImportError:
-    IS_HARDWARE_AVAILABLE = False
-
+import board
+import adafruit_ssd1306
+from PIL import Image, ImageDraw, ImageFont
 
 class DisplayManager:
     def __init__(self):
         self.is_active = False
-        if not IS_HARDWARE_AVAILABLE:
-            print("[AVISO] Bibliotecas do display não encontradas. Usando modo Dummy.")
-            return
-
         try:
+            # Tenta inicializar a comunicação I2C e a tela
             i2c = board.I2C()
             self.disp = adafruit_ssd1306.SSD1306_I2C(128, 64, i2c)
             self.width = self.disp.width
@@ -26,10 +19,11 @@ class DisplayManager:
             self.draw = ImageDraw.Draw(self.image)
             
             self.clear()
-            print("Display OLED (real) inicializado com sucesso.")
+            print("Display OLED inicializado com sucesso.")
             self.is_active = True
-        except (ValueError, RuntimeError) as e:
-            print(f"[AVISO] Hardware do display não detectado. {e}")
+        except (ValueError, RuntimeError, AttributeError) as e:
+            print(f"AVISO: Não foi possível inicializar o display OLED. {e}")
+            print("O programa continuará sem suporte a display.")
 
     def _update_display(self):
         if not self.is_active: return
@@ -40,13 +34,11 @@ class DisplayManager:
         if not self.is_active: return
         self.draw.rectangle((0, 0, self.width, self.height), outline=0, fill=0)
         self._update_display()
-    
-    def draw_face(self, expression="neutral"):
-        if not self.is_active:
-            print(f"[DISPLAY DUMMY] Mostrando rosto: {expression}")
-            return
         
+    def draw_face(self, expression="neutral"):
+        if not self.is_active: return
         self.clear()
+        
         eye_y = 25
         if expression == "listening":
             self.draw.rectangle((34, eye_y-5, 54, eye_y+15), outline=255, fill=255)
