@@ -52,3 +52,26 @@ class AudioManager:
             return None
         finally:
             self.hardware.led_off()
+
+    def transcribe_from_file(self, audio_file_path):
+        """Transcreve áudio a partir de um arquivo."""
+        with sr.AudioFile(audio_file_path) as source:
+            # O recognizer precisa saber o formato, mas o WAV é bem suportado
+            audio_data = self.recognizer.record(source)
+        try:
+            # Usa a API de reconhecimento de fala do Google
+            text = self.recognizer.recognize_google(audio_data, language='pt-BR')
+            return text
+        except sr.UnknownValueError:
+            print("Google Speech Recognition não conseguiu entender o áudio")
+            return None
+        except sr.RequestError as e:
+            print(f"Não foi possível solicitar resultados do Google Speech Recognition; {e}")
+            return None
+
+    def text_to_speech_file(self, text):
+        """Converte texto para um arquivo .mp3 e retorna o nome do arquivo."""
+        output_filename = "response.mp3"
+        tts = gTTS(text=text, lang='pt-br', slow=False)
+        tts.save(output_filename)
+        return output_filename

@@ -1,0 +1,99 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMO Web Client</title>
+    <style>
+        body { font-family: sans-serif; background: #333; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+        #status { margin-bottom: 20px; font-size: 1.2em; height: 2em;}
+        button { padding: 20px; font-size: 1.5em; border-radius: 50%; width: 150px; height: 150px; border: 5px solid; cursor: pointer; transition: all 0.2s; }
+        #recordBtn { border-color: #4CAF50; background-color: #2E7D32; color: white; }
+        #recordBtn.recording { border-color: #F44336; background-color: #C62828; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(244, 67, 54, 0); } 100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); } }
+    </style>
+</head>
+<body>
+    <h1>BMO Web Client</h1>
+    <div id="status">Insira o IP da Pi e conecte.</div>
+    <input type="text" id="pi_ip" placeholder="Ex: 192.168.1.42" style="margin-bottom: 10px; padding: 5px; font-size: 1em;">
+    <button id="connectBtn" style="width: auto; height: auto; border-radius: 10px; padding: 10px 20px; font-size: 1em;">Conectar</button>
+    <br><br>
+    <button id="recordBtn" disabled>🎤</button>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const connectBtn = document.getElementById('connectBtn');
+        const recordBtn = document.getElementById('recordBtn');
+        const piIpInput = document.getElementById('pi_ip');
+
+        let websocket;
+        let mediaRecorder;
+        let audioChunks = [];
+
+        connectBtn.onclick = () => {
+            const pi_ip = piIpInput.value.trim();
+            if (!pi_ip) { alert("Por favor, insira o endereço IP da Raspberry Pi."); return; }
+            
+            const ws_url = `ws://${pi_ip}:8765`;
+            statusDiv.textContent = `Conectando a ${ws_url}...`;
+            websocket = new WebSocket(ws_url);
+
+            websocket.onopen = () => {
+                statusDiv.textContent = "Conectado! Pressione 🎤 para gravar.";
+                recordBtn.disabled = false;
+                connectBtn.disabled = true;
+                piIpInput.disabled = true;
+            };
+
+            websocket.onmessage = (event) => {
+                statusDiv.textContent = "Recebendo resposta...";
+                const audioBlob = new Blob([event.data], { type: 'audio/mpeg' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                audio.play();
+                audio.onended = () => { statusDiv.textContent = "Conectado! Pressione 🎤 para gravar."; };
+            };
+
+            websocket.onclose = () => {
+                statusDiv.textContent = "Desconectado. Atualize e tente de novo.";
+                recordBtn.disabled = true;
+                connectBtn.disabled = false;
+                piIpInput.disabled = false;
+            };
+            
+            websocket.onerror = (error) => {
+                statusDiv.textContent = "Erro de conexão. Verifique o IP.";
+                console.error("WebSocket Error: ", error);
+            };
+        };
+
+        recordBtn.onclick = () => {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+                recordBtn.classList.remove('recording');
+                statusDiv.textContent = "Enviando para o BMO...";
+            } else {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                        mediaRecorder.start();
+                        audioChunks = [];
+                        recordBtn.classList.add('recording');
+                        statusDiv.textContent = "Gravando... Pressione para parar.";
+
+                        mediaRecorder.addEventListener("dataavailable", event => { audioChunks.push(event.data); });
+                        mediaRecorder.addEventListener("stop", () => {
+                            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                            websocket.send(audioBlob);
+                        });
+                    }).catch(err => {
+                        statusDiv.textContent = "Erro ao acessar microfone.";
+                        console.error("getUserMedia error:", err);
+                    });
+            }
+        };
+    </script>
+</body>
+</html>
