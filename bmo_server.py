@@ -80,9 +80,17 @@ async def handle_audio_connection(websocket, path):
         print(f"❌ Ocorreu um erro inesperado na conexão: {e}")
 
 # --- Ponto de Entrada ---
+async def main():
+    """Função principal para iniciar o servidor."""
+    # O websockets.serve já retorna um objeto de servidor que podemos esperar.
+    async with websockets.serve(handle_audio_connection, "0.0.0.0", 8765):
+        print("🚀 Servidor WebSocket escutando em ws://0.0.0.0:8765...")
+        # A linha abaixo manterá o servidor rodando para sempre.
+        await asyncio.Future()  
+
 if __name__ == "__main__":
-    start_server = websockets.serve(handle_audio_connection, "0.0.0.0", 8765)
-    print("🚀 Servidor WebSocket escutando em ws://0.0.0.0:8765...")
-    
-    asyncio.get_event_loop().run_until_complete(start_server)
-    asyncio.get_event_loop().run_forever()
+    try:
+        # asyncio.run() gerencia o loop de eventos automaticamente.
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\n👋 Servidor desligado.")
