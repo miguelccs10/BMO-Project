@@ -1,8 +1,19 @@
+# Requisitos para rodar o projeto completo na Raspberry Pi
+
+# Core AI e Áudio
 google-generativeai
 SpeechRecognition
 gTTS
 pydub
 pyaudio
 python-dotenv
-websockets
-Pillow 
+
+# Servidor Web (Nova Arquitetura)
+Flask
+Flask-Sock
+
+# Hardware e Display
+RPi.GPIO
+adafruit-blinka
+adafruit-circuitpython-ssd1306
+Pillow
