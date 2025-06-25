@@ -1,8 +1,16 @@
-# requirements_pc.txt
+# Requisitos para rodar o projeto em um PC (sem hardware)
+
+# Core AI e Áudio
 google-generativeai
 SpeechRecognition
 gTTS
 pydub
-pvporcupine
 pyaudio
 python-dotenv
+
+# Servidor Web
+Flask
+Flask-Sock
+
+# Wake Word (para main.py)
+pvporcupine
