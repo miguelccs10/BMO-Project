@@ -1,5 +1,4 @@
 # bmo_core/display_manager.py
-# VERSÃO COMPLETA PARA RASPBERRY PI
 
 import board
 import adafruit_ssd1306

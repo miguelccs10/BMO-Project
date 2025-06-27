@@ -1,0 +1,9 @@
+google-generativeai
+SpeechRecognition
+gTTS
+pydub
+pyaudio
+python-dotenv
+Flask
+Flask-Sock
+pvporcupine

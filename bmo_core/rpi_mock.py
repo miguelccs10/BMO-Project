@@ -1,14 +1,13 @@
 # bmo_core/rpi_mock.py
 
 # Este módulo simula a biblioteca RPi.GPIO quando o código está
-# rodando em uma máquina que não é uma Raspberry Pi (ex: seu PC Windows/Mac).
+# rodando em uma máquina que não é uma Raspberry Pi
 
 print("****************************************************************")
 print("AVISO: Usando a biblioteca RPi.GPIO MOCK para desenvolvimento.")
 print("Nenhum pino de hardware real será controlado.")
 print("****************************************************************")
 
-# Definindo as constantes que nosso código usa
 BCM = 11
 OUT = 1
 HIGH = 1

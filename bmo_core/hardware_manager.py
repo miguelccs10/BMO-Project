@@ -4,7 +4,6 @@ import time
 from . import config
 
 # --- Lógica de Importação Condicional ---
-# Esta é a parte mais importante.
 try:
     # Tenta importar a biblioteca real da Raspberry Pi
     import RPi.GPIO as GPIO
