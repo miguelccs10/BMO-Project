@@ -3,3 +3,5 @@ __pycache__/
 venv/
 *.mp3
 .env
+credentials.json
+.cache
