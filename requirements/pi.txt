@@ -10,3 +10,7 @@ RPi.GPIO
 adafruit-blinka
 adafruit-circuitpython-ssd1306
 Pillow
+websockets
+langchain
+langchain-groq
+langchain-core

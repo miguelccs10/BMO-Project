@@ -2,12 +2,12 @@
 import os
 from dotenv import load_dotenv
 
-# Carrega as variáveis do arquivo .env para o ambiente
 load_dotenv()
 
-# --- Chaves de API (carregadas do .env) ---
+# --- Chaves de API ---
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 PICOVOICE_ACCESS_KEY = os.getenv("PICOVOICE_ACCESS_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # --- Configurações do Hardware ---
 LED_PIN = 17  # Pino GPIO para o LED de status
