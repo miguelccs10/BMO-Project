@@ -1,5 +1,5 @@
 # app/bmo_server.py
-# Versão 3.2.1: Código limpo, sem rota de callback, confiando no fluxo padrão do Spotipy.
+# Versão 3.2.1: Spotify funcional, sem importação circular, com WebSocket e Flask
 
 print("--- Running BMO Server v3.2.1 (Flask + LangChain/Groq) ---")
 
