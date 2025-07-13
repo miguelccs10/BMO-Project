@@ -13,7 +13,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 LED_PIN = 17  # Pino GPIO para o LED de status
 
 # --- Configurações da Personalidade ---
-USER_NAME = "Finn"  # Nome que o BMO usa para se referir a você
+USER_NAME = "Miguel"  # Nome que o BMO usa para se referir a você
 WAKE_WORDS = ["computer", "hey bmo"] # Palavras de ativação (requer treinamento no Picovoice Console para customizadas)
 
 # --- Prompt de Sistema para a IA ---
