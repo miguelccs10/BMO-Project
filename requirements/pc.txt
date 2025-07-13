@@ -9,6 +9,7 @@ Flask-Sock
 pvporcupine
 langchain
 langchain-groq
+langchain-openai
 langchain-core
 langchain-community
 spotipy

@@ -13,4 +13,10 @@ Pillow
 websockets
 langchain
 langchain-groq
+langchain-openai
 langchain-core
+langchain-community
+spotipy
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
