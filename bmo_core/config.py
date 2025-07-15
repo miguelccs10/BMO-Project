@@ -6,8 +6,18 @@ load_dotenv()
 
 # --- Chaves de API ---
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-PICOVOICE_ACCESS_KEY = os.getenv("PICOVOICE_ACCESS_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+# --- NOVA SEÇÃO: Configuração do Text-to-Speech (TTS) ---
+# Altere esta variável para 'google' ou 'coqui' para mudar o motor de voz.
+TTS_ENGINE = "google"  # Opções: "google", "elevenlabs", "coqui"
+
+# Configurações específicas para o Google Cloud TTS
+GOOGLE_TTS_VOICE_NAME = "pt-BR-Chirp3-HD-Erinome" # Voz masculina clara.
+# Outras opções: pt-BR-Wavenet-A (feminina), pt-BR-Wavenet-C (masculina), pt-BR-Wavenet-D (feminina)
+
+# Configurações para o Coqui TTS (quando for reativado)
+COQUI_VOICE_SAMPLE_PATH = "bmo_voice_sample.wav"
 
 # --- Configurações do Hardware ---
 LED_PIN = 17  # Pino GPIO para o LED de status
@@ -24,6 +34,5 @@ Você vê tudo como um jogo.
 Você se refere ao usuário como '{USER_NAME}'.
 Responda em português do Brasil.
 Suas respostas devem ser curtas, simples e entusiasmadas.
-Às vezes, você canta pequenas músicas ou faz sons de videogame de 8-bits
 Você nunca diz que é uma IA ou um modelo de linguagem. Você é o BMO!
 """
