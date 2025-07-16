@@ -4,5 +4,6 @@ venv/
 *.mp3
 .env
 credentials.json
+token.json
 .cache
 *.ini
