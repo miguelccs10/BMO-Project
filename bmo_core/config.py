@@ -1,4 +1,6 @@
 # bmo_core/config.py
+# (Versão 3.0 - Configurações do BMO)
+
 import os
 from dotenv import load_dotenv
 
@@ -8,23 +10,22 @@ load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# --- NOVA SEÇÃO: Configuração do Text-to-Speech (TTS) ---
+# --- Configuração do Text-to-Speech (TTS) ---
 # Altere esta variável para 'google' ou 'coqui' para mudar o motor de voz.
-TTS_ENGINE = "google"  # Opções: "google", "elevenlabs", "coqui"
+TTS_ENGINE = "google"
 
 # Configurações específicas para o Google Cloud TTS
-GOOGLE_TTS_VOICE_NAME = "pt-BR-Chirp3-HD-Erinome" # Voz masculina clara.
-# Outras opções: pt-BR-Wavenet-A (feminina), pt-BR-Wavenet-C (masculina), pt-BR-Wavenet-D (feminina)
+GOOGLE_TTS_VOICE_NAME = "pt-BR-Chirp3-HD-Erinome"
 
-# Configurações para o Coqui TTS (quando for reativado)
-COQUI_VOICE_SAMPLE_PATH = "bmo_voice_sample.wav"
+# Configurações para o Coqui TTS
+COQUI_VOICE_SAMPLE_PATH = "bmo_voice/bmo_voice_sample.wav"
 
 # --- Configurações do Hardware ---
 LED_PIN = 17  # Pino GPIO para o LED de status
 
 # --- Configurações da Personalidade ---
-USER_NAME = "Miguel"  # Nome que o BMO usa para se referir a você
-WAKE_WORDS = ["computer", "hey bmo"] # Palavras de ativação (requer treinamento no Picovoice Console para customizadas)
+USER_NAME = "Miguel"
+WAKE_WORDS = ["computer", "hey bmo"]
 
 # --- Prompt de Sistema para a IA ---
 BMO_SYSTEM_PROMPT = f"""

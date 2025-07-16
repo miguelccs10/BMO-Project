@@ -1,9 +1,10 @@
-# bmo_core/agent.py (Versão 3.1.3 - Correção de Passthrough)
+# bmo_core/agent.py 
+# (Versão 3.1.3 - Correção de Passthrough)
 
 import traceback
 import json
 from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import RunnableBranch, RunnablePassthrough # <-- Importação adicionada
+from langchain_core.runnables import RunnableBranch, RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain.chains.router.llm_router import RouterOutputParser
 from langchain_groq import ChatGroq

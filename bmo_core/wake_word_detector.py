@@ -1,4 +1,6 @@
 # bmo_core/wake_word_detector.py
+# (Versão 1.0 - Detector de Wake Word com Picovoice)
+
 import os
 import pvporcupine
 import pyaudio

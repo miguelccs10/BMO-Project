@@ -1,4 +1,6 @@
 # bmo_core/hardware_manager.py
+# (Versão 2.0 - Gerenciamento de Hardware)
+
 import time
 
 try:

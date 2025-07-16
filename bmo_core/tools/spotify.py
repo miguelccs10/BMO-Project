@@ -7,7 +7,6 @@ from langchain.tools import tool
 
 # --- Configuração da Autenticação ---
 # A autenticação agora solicita mais permissões para ler o estado da reprodução.
-# Lembre-se que o Spotipy lerá as variáveis de ambiente (SPOTIPY_...) que você configurou.
 try:
     scope = "user-modify-playback-state,user-read-playback-state,user-read-currently-playing"
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
@@ -56,7 +55,7 @@ def play_music_on_spotify(song_name: str, artist_name: str = None) -> str:
 
     device_id = get_active_device_id()
     if not device_id:
-        return "Bip bop... Não consegui encontrar um dispositivo Spotify para tocar. Por favor, abra o Spotify em um dos seus aparelhos."
+        return "Não consegui encontrar um dispositivo Spotify para tocar. Por favor, abra o Spotify em um dos seus aparelhos."
 
     query = f"track:{song_name}"
     if artist_name:
@@ -86,16 +85,16 @@ def control_spotify_playback(action: str) -> str:
 
     device_id = get_active_device_id()
     if not device_id:
-        return "Bip bop... Não consegui encontrar um dispositivo Spotify para controlar."
+        return "Não consegui encontrar um dispositivo Spotify para controlar."
 
     action = action.lower().strip()
     try:
         if action == 'pause':
             sp.pause_playback(device_id=device_id)
-            return "Música pausada, Finn!"
+            return "Música pausada!"
         elif action in ['resume', 'play']:
             sp.start_playback(device_id=device_id)
-            return "Continuando a música! Bip bop!"
+            return "Continuando a música!"
         elif action == 'next':
             sp.next_track(device_id=device_id)
             return "Pulei para a próxima música!"
@@ -120,8 +119,8 @@ def get_current_spotify_song() -> str:
             item = current_track['item']
             song = item['name']
             artist = item['artists'][0]['name']
-            return f"Está tocando '{song}' de '{artist}' agora mesmo, Finn!"
+            return f"Está tocando '{song}' de '{artist}' agora mesmo!"
         else:
-            return "O Spotify está em silêncio no momento, bip bop."
+            return "O Spotify está em silêncio no momento."
     except Exception as e:
         return f"Oh não! Tive um problema ao checar o Spotify: {e}"

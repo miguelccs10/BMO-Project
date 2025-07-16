@@ -1,4 +1,6 @@
 # bmo_core/display_manager.py
+# (Versão 2.5 - Gerenciamento de Display OLED)
+
 from .hardware_manager import IS_RASPBERRY_PI
 
 if IS_RASPBERRY_PI:

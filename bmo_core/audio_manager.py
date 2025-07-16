@@ -1,8 +1,9 @@
-# bmo_core/audio_manager.py (Versão Final com Múltiplos Motores de TTS)
+# bmo_core/audio_manager.py 
+# (Versão Final com Múltiplos Motores de TTS)
 
 import traceback
 import os
-from . import config  # Importa nosso novo arquivo de configuração
+from . import config
 
 # --- Importações condicionais ---
 if config.TTS_ENGINE == "google":
@@ -56,7 +57,7 @@ class AudioManager:
                     self.tts_engine = None
 
     def transcribe_from_file(self, audio_file_path: str) -> str:
-        # Esta função não muda
+        
         if not self.groq_client: return "Sistema de audição offline."
         try:
             with open(audio_file_path, "rb") as file:

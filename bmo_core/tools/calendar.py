@@ -1,4 +1,5 @@
-# bmo_core/tools/calendar.py (Versão Padrão e Correta para "Desktop App")
+# bmo_core/tools/calendar.py 
+# Versão Correta para "Desktop App"
 
 import datetime
 import os
@@ -25,10 +26,8 @@ def get_calendar_service():
             creds.refresh(Request())
         else:
             # --- ESTE É O FLUXO CORRETO PARA CREDENCIAIS DE DESKTOP ---
-            # Ele tentará abrir uma aba no seu navegador automaticamente.
             flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
             creds = flow.run_local_server(port=0)
-            # --- FIM DO FLUXO CORRETO ---
         
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
@@ -52,7 +51,7 @@ def get_next_appointment() -> str:
         events = events_result.get('items', [])
 
         if not events:
-            return "Bip bop! Sua agenda está livre como um passarinho!"
+            return "Sua agenda está livre como um passarinho!"
         
         event = events[0]
         start_info = event['start'].get('dateTime', event['start'].get('date'))

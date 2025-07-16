@@ -1,7 +1,7 @@
 # app/bmo_server.py
 # Versão 3.3: Arquitetura Flask com Agente LangChain e Hardware Flexível
 
-print("--- Running BMO Server v3.3 (Flask + LangChain + Hardware Flexível) ---")
+print("--- Running BMO Server v3.3 ---")
 
 import sys
 import os
@@ -83,7 +83,7 @@ def handle_audio_connection(ws):
                         print("✅ Resposta enviada!")
                 else:
                     print("   ⚠️ Não foi possível transcrever. Enviando resposta de erro.")
-                    response_audio_filename = audio_manager.text_to_speech_file("Bip bop... Não ouvi, pode repetir?")
+                    response_audio_filename = audio_manager.text_to_speech_file("Ops... Não ouvi, pode repetir?")
                     if response_audio_filename:
                         with open(response_audio_filename, "rb") as f: ws.send(f.read())
             finally:
