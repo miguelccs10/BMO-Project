@@ -1,10 +1,10 @@
 # main.py
 # Versão adaptada para rodar em qualquer PC (Windows/Mac/Linux) sem hardware da Pi.
 
-from bmo_core.audio_manager import AudioManager
+from bmo_core.services.audio_manager import AudioManager
 from bmo_core.ai_manager import AIManager
 from bmo_core.wake_word_detector import WakeWordDetector
-from bmo_core import config
+from config import settings
 import time
 
 # --- Módulos Principais (iniciados como None) ---
@@ -45,7 +45,7 @@ class DummyDisplay:
 def main_bmo_logic():
     """Esta função é o que acontece DEPOIS que a wake-word é ouvida."""
     display.draw_face("happy") 
-    audio.speak(f"Sim, {config.USER_NAME}?")
+    audio.speak(f"Sim, {settings.USER_NAME}?")
     
     display.draw_face("listening")
     user_question = audio.listen_and_transcribe()
@@ -67,14 +67,14 @@ if __name__ == "__main__":
     try:
         # 1. Tenta inicializar o hardware real, se falhar, usa os Dummies
         try:
-            from bmo_core.hardware_manager import HardwareManager
+            from bmo_core.services.hardware_manager import HardwareManager
             hardware = HardwareManager()
         except Exception as e:
             print(f"Não foi possível carregar HardwareManager: {e}")
             hardware = DummyHardware()
             
         try:
-            from bmo_core.display_manager import DisplayManager
+            from bmo_core.services.display_manager import DisplayManager
             display = DisplayManager()
             if not display.is_active: # Se o módulo carregou mas a tela não foi encontrada
                 raise RuntimeError("Display inativo.")

@@ -3,12 +3,12 @@
 
 import traceback
 import os
-from . import config
+from ...config import settings
 
 # --- Importações condicionais ---
-if config.TTS_ENGINE == "google":
+if settings.TTS_ENGINE == "google":
     from google.cloud import texttospeech
-elif config.TTS_ENGINE == "coqui":
+elif settings.TTS_ENGINE == "coqui":
     import torch
     from TTS.api import TTS
     from TTS.tts.configs.xtts_config import XttsConfig
@@ -20,12 +20,12 @@ from groq import Groq
 class AudioManager:
     def __init__(self, hardware_manager):
         self.hardware = hardware_manager
-        self.tts_engine = config.TTS_ENGINE
+        self.tts_engine = settings.TTS_ENGINE
         self.tts_model = None
 
         # --- Inicialização do STT (Whisper/Groq) ---
         try:
-            self.groq_client = Groq(api_key=config.GROQ_API_KEY)
+            self.groq_client = Groq(api_key=settings.GROQ_API_KEY)
             print("✅ Cliente da Groq para Whisper (STT) inicializado.")
         except Exception as e:
             self.groq_client = None
@@ -43,8 +43,8 @@ class AudioManager:
 
         elif self.tts_engine == "coqui":
             print("⏳ Carregando modelo Coqui TTS (XTTSv2) na memória...")
-            if not os.path.exists(config.COQUI_VOICE_SAMPLE_PATH):
-                print(f"❌ ERRO CRÍTICO: Arquivo de amostra de voz '{config.COQUI_VOICE_SAMPLE_PATH}' não encontrado.")
+            if not os.path.exists(settings.COQUI_VOICE_SAMPLE_PATH):
+                print(f"❌ ERRO CRÍTICO: Arquivo de amostra de voz '{settings.COQUI_VOICE_SAMPLE_PATH}' não encontrado.")
                 self.tts_engine = None
             else:
                 try:
@@ -91,7 +91,7 @@ class AudioManager:
             synthesis_input = texttospeech.SynthesisInput(text=text)
             voice = texttospeech.VoiceSelectionParams(
                 language_code="pt-BR",
-                name=config.GOOGLE_TTS_VOICE_NAME
+                name=settings.GOOGLE_TTS_VOICE_NAME
             )
             audio_config = texttospeech.AudioConfig(
                 audio_encoding=texttospeech.AudioEncoding.MP3
@@ -113,7 +113,7 @@ class AudioManager:
             self.tts_model.tts_to_file(
                 text=text,
                 file_path=output_filename,
-                speaker_wav=config.COQUI_VOICE_SAMPLE_PATH,
+                speaker_wav=settings.COQUI_VOICE_SAMPLE_PATH,
                 language="pt",
                 split_sentences=True
             )

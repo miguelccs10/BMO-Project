@@ -5,7 +5,7 @@ import os
 import pvporcupine
 import pyaudio
 import struct
-from . import config
+from ..config import settings
 
 class WakeWordDetector:
     def __init__(self, on_wake_word_callback):
@@ -23,7 +23,7 @@ class WakeWordDetector:
             keyword_paths = [os.path.join(os.path.dirname(__file__), '..', 'picovoice_models', 'Ei-Bimo-raspberry.ppn')]
 
             self.porcupine = pvporcupine.create(
-                access_key=config.PICOVOICE_ACCESS_KEY,
+                access_key=settings.PICOVOICE_ACCESS_KEY,
                 model_path=model_file_path,
                 keyword_paths=keyword_paths,
             )
@@ -36,13 +36,13 @@ class WakeWordDetector:
                 frames_per_buffer=self.porcupine.frame_length
             )
 
-            print(f"BMO está escutando! Diga '{' ou '.join(config.WAKE_WORDS)}'.")
+            print(f"BMO está escutando! Diga '{' ou '.join(settings.WAKE_WORDS)}'.")
             while True:
                 pcm = self.audio_stream.read(self.porcupine.frame_length)
                 pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
                 keyword_index = self.porcupine.process(pcm)
                 if keyword_index >= 0:
-                    print(f"Palavra de ativação '{config.WAKE_WORDS[keyword_index]}' detectada!")
+                    print(f"Palavra de ativação '{settings.WAKE_WORDS[keyword_index]}' detectada!")
                     self.on_wake_word_callback()
 
         except Exception as e:

@@ -1,7 +1,7 @@
 # app/bmo_server.py
-# Versão 3.3: Arquitetura Flask com Agente LangChain e Hardware Flexível
+# Versão 3.3.4: Correção de API langchain
 
-print("--- Running BMO Server v3.3 ---")
+print("--- Running BMO Server v3.3.X ---")
 
 import sys
 import os
@@ -12,11 +12,12 @@ import traceback
 from flask import Flask, render_template_string
 from flask_sock import Sock
 from pydub import AudioSegment
+from simple_websocket.errors import ConnectionClosed
 
-from bmo_core.agent import BMOAgent
-from bmo_core.audio_manager import AudioManager
-from bmo_core.hardware_manager import HardwareManager
-from bmo_core.display_manager import DisplayManager
+from bmo_core.agent.agent import BMOAgent
+from bmo_core.services.audio_manager import AudioManager
+from bmo_core.services.hardware_manager import HardwareManager
+from bmo_core.services.display_manager import DisplayManager
 
 app = Flask(__name__)
 sock = Sock(app)
@@ -91,11 +92,14 @@ def handle_audio_connection(ws):
                 for f in [input_filename, wav_filename, response_audio_filename]:
                     if f and os.path.exists(f): os.remove(f)
                 display_manager.draw_face("neutral"); hardware_manager.led_off()
+    except ConnectionClosed:
+        # Captura o fechamento normal da conexão e não mostra um erro feio.
+        print(f"   Conexão fechada normalmente pelo cliente.")
     except Exception as e:
-        print(f"❌ Erro na conexão WebSocket: {e}"); traceback.print_exc()
+        # Captura todos os outros erros inesperados.
+        print(f"❌ Erro inesperado na conexão WebSocket: {e}"); traceback.print_exc()
     finally:
         print(f"👋 Cliente desconectado: {ws.environ.get('REMOTE_ADDR')}")
-        display_manager.draw_face("neutral"); hardware_manager.led_off()
 
 if __name__ == "__main__":
     try:
