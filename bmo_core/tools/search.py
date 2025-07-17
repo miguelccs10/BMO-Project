@@ -1,16 +1,17 @@
 # bmo_core/tools/search.py
 # Ferramenta para dar ao BMO acesso à internet através da Pesquisa Google.
+# Versão atualizada para usar o pacote langchain-google-community.
 
-from langchain_community.tools import GoogleSearchRun
-from langchain_community.utilities import GoogleSearchAPIWrapper
+# --- MUDANÇA NOS IMPORTS ---
+# Em vez de importar de langchain_community, importamos do novo pacote dedicado.
+from langchain_google_community import GoogleSearchRun, GoogleSearchAPIWrapper
 
-#"wrapper" da API, que lida com a comunicação.
 search_wrapper = GoogleSearchAPIWrapper()
 
-#ferramenta que o agente LangChain usará.
-# O nome e a descrição são CRUCIAIS para que o agente saiba QUANDO usar esta ferramenta.
 google_search_tool = GoogleSearchRun(
     name="google_search",
     description="Uma ferramenta para pesquisar na internet por informações recentes, eventos atuais, notícias e fatos. Use para qualquer pergunta que você não saiba a resposta.",
     api_wrapper=search_wrapper
 )
+
+print("✅ Ferramenta de Pesquisa Google inicializada.")
