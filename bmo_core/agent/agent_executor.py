@@ -19,6 +19,7 @@ from config import prompts
 from bmo_core.agent.memory import wrap_with_memory, get_session_history 
 from bmo_core.tools.spotify import play_music_on_spotify, control_spotify_playback, get_current_spotify_song
 from bmo_core.tools.calendar import get_next_appointment
+from bmo_core.tools.search import google_search_tool
 
 # Modelo de dados para a saída do roteador.
 class RouteQuery(BaseModel):
@@ -41,7 +42,12 @@ class BMOAgent:
             conversation_chain = conv_prompt | agent_llm | StrOutputParser()
 
             # --- AGENTE DE FERRAMENTAS ---
-            tools = [play_music_on_spotify, control_spotify_playback, get_current_spotify_song, get_next_appointment]
+            tools = [play_music_on_spotify, 
+                    control_spotify_playback,
+                    get_current_spotify_song,
+                    get_next_appointment,
+                    google_search_tool
+                ]
             agent_prompt = hub.pull("hwchase17/openai-tools-agent")
             agent = create_openai_tools_agent(agent_llm, tools, agent_prompt)
             tool_agent_chain = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
