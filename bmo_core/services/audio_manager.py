@@ -1,11 +1,11 @@
-# bmo_core/audio_manager.py 
-# (Versão Final com Múltiplos Motores de TTS)
+# bmo_core/services/audio_manager.py
+# Gerencia a conversão de áudio para texto (STT) e texto para áudio (TTS).
 
 import traceback
 import os
-from ...config import settings
+from config import settings # Importa a nossa nova configuração central
 
-# --- Importações condicionais ---
+# --- Importações condicionais baseadas na configuração ---
 if settings.TTS_ENGINE == "google":
     from google.cloud import texttospeech
 elif settings.TTS_ENGINE == "coqui":
@@ -19,7 +19,7 @@ from groq import Groq
 
 class AudioManager:
     def __init__(self, hardware_manager):
-        self.hardware = hardware_manager
+        self.hardware = hardware_manager # Pode ser usado no futuro para feedback
         self.tts_engine = settings.TTS_ENGINE
         self.tts_model = None
 
@@ -39,7 +39,7 @@ class AudioManager:
                 print("✅ Cliente Google Cloud TTS inicializado.")
             except Exception as e:
                 print(f"❌ ERRO ao inicializar Google Cloud TTS: {e}")
-                self.tts_engine = None # Desativa em caso de erro
+                self.tts_engine = None
 
         elif self.tts_engine == "coqui":
             print("⏳ Carregando modelo Coqui TTS (XTTSv2) na memória...")
@@ -53,11 +53,11 @@ class AudioManager:
                     self.tts_model = TTS("tts_models/multilingual/multi-dataset/xtts_v2", gpu=(device == "cuda"))
                     print(f"✅ Modelo Coqui TTS carregado com sucesso no dispositivo '{device}'.")
                 except Exception as e:
-                    print(f"❌ ERRO ao carregar modelo Coqui TTS: {e}."); traceback.print_exc()
+                    print(f"❌ ERRO ao carregar modelo Coqui TTS: {e}"); traceback.print_exc()
                     self.tts_engine = None
 
     def transcribe_from_file(self, audio_file_path: str) -> str:
-        
+        # A lógica desta função permanece a mesma
         if not self.groq_client: return "Sistema de audição offline."
         try:
             with open(audio_file_path, "rb") as file:
@@ -69,9 +69,6 @@ class AudioManager:
             return None
 
     def text_to_speech_file(self, text: str) -> str:
-        """
-        Gera o áudio usando o motor de TTS selecionado na configuração.
-        """
         if not self.tts_engine:
             print("   ⚠️ Nenhum motor de TTS está ativo. Impossível gerar voz.")
             return None
@@ -81,24 +78,15 @@ class AudioManager:
             return self._tts_google(text)
         elif self.tts_engine == "coqui":
             return self._tts_coqui(text)
-        
         return None
 
     def _tts_google(self, text: str) -> str:
-        """Função privada para gerar áudio com Google Cloud TTS."""
         output_filename = "response.mp3"
         try:
             synthesis_input = texttospeech.SynthesisInput(text=text)
-            voice = texttospeech.VoiceSelectionParams(
-                language_code="pt-BR",
-                name=settings.GOOGLE_TTS_VOICE_NAME
-            )
-            audio_config = texttospeech.AudioConfig(
-                audio_encoding=texttospeech.AudioEncoding.MP3
-            )
-            response = self.tts_model.synthesize_speech(
-                input=synthesis_input, voice=voice, audio_config=audio_config
-            )
+            voice = texttospeech.VoiceSelectionParams(language_code="pt-BR", name=settings.GOOGLE_TTS_VOICE_NAME)
+            audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
+            response = self.tts_model.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
             with open(output_filename, "wb") as out:
                 out.write(response.audio_content)
             return output_filename
@@ -107,16 +95,12 @@ class AudioManager:
             return None
 
     def _tts_coqui(self, text: str) -> str:
-        """Função privada para gerar áudio com Coqui TTS."""
         output_filename = "response.wav"
         try:
             self.tts_model.tts_to_file(
-                text=text,
-                file_path=output_filename,
+                text=text, file_path=output_filename,
                 speaker_wav=settings.COQUI_VOICE_SAMPLE_PATH,
-                language="pt",
-                split_sentences=True
-            )
+                language="pt", split_sentences=True)
             return output_filename
         except Exception as e:
             print(f"❌ ERRO no motor Coqui TTS: {e}"); traceback.print_exc()

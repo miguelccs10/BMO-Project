@@ -1,6 +1,5 @@
 # config/settings.py
 # Ponto central para todas as configurações e chaves de API do projeto.
-# Versão de Projeto: 5.0
 
 import os
 from dotenv import load_dotenv
@@ -29,7 +28,7 @@ os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY", "")
 # --- Configuração do Motor de Voz (TTS) ---
 # Opções: "google", "coqui", "elevenlabs"
 TTS_ENGINE = "google"
-GOOGLE_TTS_VOICE_NAME = "pt-BR-Wavenet-B"
+GOOGLE_TTS_VOICE_NAME = "pt-BR-Chirp3-HD-Erinome"
 COQUI_VOICE_SAMPLE_PATH = os.path.join(BASE_DIR, "bmo_voice_sample.wav")
 
 # --- Nome do Usuário ---

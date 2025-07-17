@@ -3,7 +3,7 @@
 
 from bmo_core.services.audio_manager import AudioManager
 from bmo_core.ai_manager import AIManager
-from bmo_core.wake_word_detector import WakeWordDetector
+from bmo_core.services.wake_word_detector import WakeWordDetector
 from config import settings
 import time
 
