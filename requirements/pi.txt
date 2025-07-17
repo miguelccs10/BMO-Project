@@ -3,6 +3,7 @@ langchain-core
 langchain-groq
 langchain-community
 langchain-openai
+langchain-google-community
 Flask
 flask-sock
 websockets
