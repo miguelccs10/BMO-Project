@@ -10,7 +10,7 @@ from langchain.tools import tool
 try:
     scope = "user-modify-playback-state,user-read-playback-state,user-read-currently-playing"
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
-    print("✅ Conexão com a API do Spotify estabelecida.")
+    print("✅ Conexão com o Spotify estabelecida.")
 except Exception as e:
     print(f"❌ ERRO: Não foi possível conectar ao Spotify. Verifique as credenciais. Erro: {e}")
     sp = None
@@ -53,7 +53,7 @@ def play_music_on_spotify(song_name: str, artist_name: str = None) -> str:
 
     device_id = get_active_device_id()
     if not device_id:
-        return "Bip bop... Não consegui encontrar um dispositivo Spotify para tocar. Por favor, abra o Spotify em um dos seus aparelhos."
+        return "Não consegui encontrar um dispositivo Spotify para tocar. Por favor, abra o Spotify em um dos seus aparelhos."
 
     query = f"track:{song_name}"
     if artist_name:
@@ -62,7 +62,7 @@ def play_music_on_spotify(song_name: str, artist_name: str = None) -> str:
     try:
         results = sp.search(q=query, type='track', limit=1)
         if not results['tracks']['items']:
-            return f"Bip bop... Não encontrei a música '{song_name}'."
+            return f"Não encontrei a música '{song_name}'."
         
         track = results['tracks']['items'][0]
         track_uri = track['uri']
@@ -84,7 +84,7 @@ def control_spotify_playback(action: str) -> str:
 
     device_id = get_active_device_id()
     if not device_id:
-        return "Bip bop... Não consegui encontrar um dispositivo Spotify para controlar."
+        return "Não consegui encontrar um dispositivo Spotify para controlar."
 
     # --- CORREÇÃO PRINCIPAL ---
     # Limpa espaços em branco e remove aspas simples ou duplas que o LLM possa adicionar.
@@ -93,10 +93,10 @@ def control_spotify_playback(action: str) -> str:
     try:
         if action == 'pause':
             sp.pause_playback(device_id=device_id)
-            return "Música pausada, Finn!"
+            return "Música pausada"
         elif action in ['resume', 'play']:
             sp.start_playback(device_id=device_id)
-            return "Continuando a música! Bip bop!"
+            return "Continuando a música!"
         elif action == 'next':
             sp.next_track(device_id=device_id)
             return "Pulei para a próxima música!"
@@ -126,7 +126,7 @@ def get_current_spotify_song() -> str:
             artist = item['artists'][0]['name']
             return f"Está tocando '{song}' de '{artist}' agora mesmo, Finn!"
         else:
-            return "O Spotify está em silêncio no momento, bip bop."
+            return "O Spotify está em silêncio no momento..."
     except Exception as e:
         print(f"❌ ERRO em get_current_spotify_song: {e}"); traceback.print_exc()
         return f"Oh não! Tive um problema ao checar o Spotify: {e}"

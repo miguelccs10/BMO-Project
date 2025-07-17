@@ -11,7 +11,6 @@ except (ImportError, RuntimeError):
 
 class HardwareManager:
     def __init__(self):
-        # A configuração do pino poderia vir do config.settings se quiséssemos
         self.led_pin = 17 
         if IS_RASPBERRY_PI:
             GPIO.setmode(GPIO.BCM)

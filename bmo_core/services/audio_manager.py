@@ -3,7 +3,7 @@
 
 import traceback
 import os
-from config import settings # Importa a nossa nova configuração central
+from config import settings
 
 # --- Importações condicionais baseadas na configuração ---
 if settings.TTS_ENGINE == "google":
@@ -57,7 +57,6 @@ class AudioManager:
                     self.tts_engine = None
 
     def transcribe_from_file(self, audio_file_path: str) -> str:
-        # A lógica desta função permanece a mesma
         if not self.groq_client: return "Sistema de audição offline."
         try:
             with open(audio_file_path, "rb") as file:

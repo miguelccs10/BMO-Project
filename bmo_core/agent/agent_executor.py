@@ -1,5 +1,5 @@
 # bmo_core/agent/agent_executor.py
-# Monta e exporta o agente LangChain final com memória e roteamento.
+# Monta e exporta o agente LangChain com memória e roteamento.
 
 import traceback
 import json
@@ -70,11 +70,10 @@ class BMOAgent:
                 destination=lambda x: router_chain.invoke({"input": x["input"], "chat_history": x["chat_history"]})
             ) | RunnableLambda(lambda x: route(x).invoke(x))
 
-            # --- ESTRUTURA FINAL COM MEMÓRIA ---
-            # Usamos a função 'wrap_with_memory' do nosso módulo de memória
+            # --- ESTRUTURA DE MEMÓRIA ---
             self.agent_with_chat_history = wrap_with_memory(full_chain)
             
-            print("✅ Agente BMO com Arquitetura Refatorada inicializado.")
+            print("✅ Agente BMO inicializado.")
 
         except Exception as e:
             print(f"❌ ERRO: Falha ao inicializar o BMOAgent. {e}"); traceback.print_exc()
@@ -96,8 +95,8 @@ class BMOAgent:
 
             # A saída pode ser um dicionário (do agente) ou uma string (da conversa)
             if isinstance(response, dict):
-                return response.get('output', 'Bip bop... algo deu errado na resposta do agente.')
+                return response.get('output', 'Oh não... algo deu errado na resposta do agente.')
             return response
         except Exception as e:
             print(f"❌ ERRO: Falha ao invocar a cadeia principal. {e}"); traceback.print_exc()
-            return "Bip bop... tive um grande curto-circuito cerebral."
+            return "Ops... tive um curto-circuito!"
