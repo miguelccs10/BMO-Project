@@ -29,6 +29,7 @@ CHUNK = 1280
 RATE = 16000
 RECORD_SECONDS = 5
 WAKE_WORD_THRESHOLD = 0.985
+INPUT_DEVICE_INDEX = None
 
 # --- Inicialização dos Módulos ---
 hardware = HardwareManager()
@@ -119,7 +120,20 @@ if __name__ == "__main__":
     oww_model = Model(wakeword_models=[WAKE_WORD_MODEL_PATH])
     
     pa = pyaudio.PyAudio()
-    audio_stream = pa.open(rate=RATE, channels=1, format=pyaudio.paInt16, input=True, frames_per_buffer=CHUNK)
+        # Lógica para garantir que o dispositivo de entrada padrão é o correto, se não especificado
+    if INPUT_DEVICE_INDEX is None:
+        print("🎤 Nenhum microfone especificado. Usando dispositivo de entrada padrão.")
+    else:
+        print(f"🎤 Usando microfone com ID: {INPUT_DEVICE_INDEX}")
+
+    audio_stream = pa.open(
+        rate=RATE, 
+        channels=1, 
+        format=pyaudio.paInt16, 
+        input=True, 
+        frames_per_buffer=CHUNK,
+        input_device_index=INPUT_DEVICE_INDEX # <-- Usamos a nossa variável
+    )
     
     print("\n✅ BMO está pronto! Escutando pela wake-word 'Ei, BMO'...")
     display.draw_face("neutral"); hardware.led_off()
