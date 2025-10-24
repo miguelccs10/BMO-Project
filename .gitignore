@@ -10,4 +10,5 @@ credentials.json
 token.json
 .cache
 *.ini
-training_samples/
+training_samples/google-cloud-cli-linux-x86_64.tar.gz
+*.tar.gz
