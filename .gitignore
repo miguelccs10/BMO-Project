@@ -1,6 +1,8 @@
 __pycache__/
 *.pyc
 venv/
+BMO/
+google-cloud-sdk/
 *.mp3
 .env
 credentials.json
