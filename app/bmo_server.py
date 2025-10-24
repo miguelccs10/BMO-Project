@@ -2,10 +2,18 @@
 # Versão 4.0 (Restaurada): Arquitetura Flask com Agente LangChain e Hardware Flexível.
 # Usa o servidor de desenvolvimento padrão do Flask para agilidade.
 
-# --- Configuração do Path e Imports Iniciais ---
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# --- DEFINIÇÃO DE CAMINHOS E CREDENCIAIS (A MESMA LÓGICA DO bmo.py) ---
+# .parent.parent sobe dois níveis para chegar na raiz do projeto (de bmo_server.py -> app -> BMO-Project)
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.append(str(BASE_DIR))
+
+# Define o caminho para as credenciais do Google ANTES de qualquer import do projeto.
+credentials_path = BASE_DIR / "google_adc_credentials.json"
+if os.path.exists(credentials_path):
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(credentials_path)
+else:
+    # Este aviso aparecerá ANTES do print de "Iniciando Sistemas", o que é bom.
+    print(f"⚠️  AVISO: Arquivo de credenciais ADC '{credentials_path}' não encontrado. APIs do Google podem falhar.")
 
 from config import settings
 

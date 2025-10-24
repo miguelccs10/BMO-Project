@@ -128,7 +128,11 @@ if __name__ == "__main__":
         print(f"❌ ERRO CRÍTICO: Modelo de Wake-Word não encontrado em '{WAKE_WORD_MODEL_PATH}'"); sys.exit(1)
 
     print("⏳ Carregando modelo OpenWakeWord...")
-    oww_model = Model(wakeword_models=[str(WAKE_WORD_MODEL_PATH)])
+    oww_model = Model(
+    wakeword_models=[str(WAKE_WORD_MODEL_PATH)],
+    inference_framework='onnx'
+)
+
     
     pa = pyaudio.PyAudio()
     audio_stream = pa.open(
