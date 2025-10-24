@@ -30,8 +30,10 @@ class BMOAgent:
         self.agent_with_chat_history = None
         try:
             # --- LLMs ---
-            router_llm = ChatGroq(temperature=0, model_name="llama3-70b-8192", groq_api_key=settings.GROQ_API_KEY)
-            agent_llm = ChatGroq(temperature=0.7, model_name="llama3-70b-8192", groq_api_key=settings.GROQ_API_KEY)
+            modelo_groq_atual = "llama-3.1-8b-instant"
+
+            router_llm = ChatGroq(temperature=0, model_name=modelo_groq_atual, groq_api_key=settings.GROQ_API_KEY)
+            agent_llm = ChatGroq(temperature=0.7, model_name=modelo_groq_atual, groq_api_key=settings.GROQ_API_KEY)
             
             # --- CADEIA DE CONVERSA ---
             conv_prompt = ChatPromptTemplate.from_messages([
