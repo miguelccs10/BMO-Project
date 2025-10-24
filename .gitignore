@@ -3,6 +3,7 @@ __pycache__/
 venv/
 BMO/
 google-cloud-sdk/
+CRO_2025/
 *.mp3
 .env
 credentials.json
