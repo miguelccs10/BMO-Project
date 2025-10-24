@@ -161,7 +161,8 @@ sudo apt-get install -y portaudio19-dev python3-pyaudio ffmpeg git python3-venv 
 
 ```bash
 git clone https://github.com/SeuUsuario/BMO-Project.git
-cd BMO-Project```
+cd BMO-Project
+```
 
 #### c) Configurar o Ambiente Virtual e Instalar Dependências
 
@@ -196,3 +197,4 @@ python bmo.py
 
 **Primeira Execução (Autenticação):**
 Na primeira vez que você usar as ferramentas do Spotify e do Google Calendar, o programa irá pausar e pedir para você seguir um fluxo de autenticação no navegador. Siga as instruções no terminal para autorizar o acesso. Arquivos de token (`token.json`, `.cache`) serão criados para automatizar as futuras execuções.
+
