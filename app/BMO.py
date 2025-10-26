@@ -10,7 +10,6 @@ from pathlib import Path
 import uuid
 import pyaudio
 import numpy as np
-import wave
 from openwakeword.model import Model
 from pydub import AudioSegment
 from pydub.playback import play
@@ -77,32 +76,23 @@ def clear_audio_buffer(stream, clear_duration_ms: int = None):
             pass
 
 
-def record_question(stream, audio_interface):
-    """Record user question after wake-word detection."""
+def record_question_vad(stream, audio_interface):
+    """Record user question using VAD after wake-word detection."""
     print("🎤 Ouvindo sua pergunta...")
     display.draw_face("listening")
     hardware.led_on()
 
-    frames = []
-    # Clear buffer first
-    stream.read(CHUNK * 4, exception_on_overflow=False)
+    # Use AudioManager's VAD-based recording
+    audio_path, duration = audio_manager.record_with_vad(stream, audio_interface, clear_buffer=True)
 
-    print(f"   (Gravando por {RECORD_SECONDS} segundos...)")
-    for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-        data = stream.read(CHUNK, exception_on_overflow=False)
-        frames.append(data)
-
-    print("✅ Gravação concluída.")
-    display.draw_face("thinking")
-
-    # Save recording
-    with wave.open(str(RECORDING_PATH), 'wb') as wf:
-        wf.setnchannels(config.config.wake_word.audio.channels)
-        wf.setsampwidth(audio_interface.get_sample_size(pyaudio.paInt16))
-        wf.setframerate(RATE)
-        wf.writeframes(b''.join(frames))
-
-    return str(RECORDING_PATH)
+    if audio_path:
+        print("✅ Gravação concluída.")
+        display.draw_face("thinking")
+        return audio_path
+    else:
+        print("⚠️  Nenhum áudio capturado.")
+        display.draw_face("neutral")
+        return None
 
 
 def play_response(audio_file_path, stream):
@@ -132,8 +122,15 @@ def conversation_cycle(audio_stream, audio_interface):
     """Handle one complete conversation cycle."""
     print(f"\n💡 BMO Ativado! (Usando sessão: ...{BMO_SESSION_ID[-12:]})")
 
-    # Record question
-    question_audio_path = record_question(audio_stream, audio_interface)
+    # Record question using VAD
+    question_audio_path = record_question_vad(audio_stream, audio_interface)
+
+    if not question_audio_path:
+        # No audio captured
+        print("   Nenhuma pergunta detectada. Voltando a escutar...")
+        hardware.led_off()
+        display.draw_face("neutral")
+        return
 
     # Transcribe
     user_question = audio_manager.transcribe_from_file(question_audio_path)
