@@ -89,13 +89,33 @@ class BMOAgent:
         conversation_chain = conv_prompt | agent_llm | StrOutputParser()
 
         # --- Tool Agent Chain ---
-        tools = [
-            play_music_on_spotify,
-            control_spotify_playback,
-            get_current_spotify_song,
-            get_next_appointment,
-            google_search_tool
-        ]
+        # Load tools conditionally based on configuration
+        tools = []
+
+        if self.config.is_tool_enabled("spotify"):
+            tools.extend([
+                play_music_on_spotify,
+                control_spotify_playback,
+                get_current_spotify_song
+            ])
+            print("   ✓ Spotify tools carregadas")
+        else:
+            print("   ⊗ Spotify tools desabilitadas")
+
+        if self.config.is_tool_enabled("google_calendar"):
+            tools.append(get_next_appointment)
+            print("   ✓ Google Calendar tool carregada")
+        else:
+            print("   ⊗ Google Calendar tool desabilitada")
+
+        if self.config.is_tool_enabled("google_search"):
+            tools.append(google_search_tool)
+            print("   ✓ Google Search tool carregada")
+        else:
+            print("   ⊗ Google Search tool desabilitada")
+
+        if not tools:
+            print("   ⚠️  AVISO: Nenhuma ferramenta habilitada! O agente funcionará apenas no modo conversação.")
 
         # Load the standard OpenAI tools agent prompt from LangChain Hub
         agent_prompt = hub.pull("hwchase17/openai-tools-agent")
