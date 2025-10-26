@@ -50,7 +50,7 @@ stt:
 
 # Wake Word Detection
 wake_word:
-  model_path: "custom_models/wake_word/ei_bmo.onnx"
+  model_path: "custom_models/wake_word/Talos.onnx"
   threshold: 0.5
   inference_framework: "onnx"
 
@@ -63,7 +63,7 @@ wake_word:
 
 # Audio Recording Settings
 recording:
-  duration_seconds: 5
+  duration_seconds: 5  # Fallback if VAD is disabled
   sample_rate: 16000
   channels: 1
   chunk_size: 1280
@@ -72,6 +72,24 @@ recording:
 
   # Buffer management
   buffer_clear_duration_ms: 500
+
+  # Voice Activity Detection (VAD)
+  vad:
+    enabled: true
+    threshold: 0.5  # Speech probability threshold (0.0 - 1.0)
+    min_speech_duration_ms: 250  # Minimum speech duration to start recording
+    min_silence_duration_ms: 700  # Silence duration to stop recording
+    max_recording_seconds: 30  # Maximum recording duration (safety limit)
+    speech_pad_ms: 300  # Padding before speech starts
+
+# Tools Configuration (Enable/Disable features)
+tools:
+  spotify:
+    enabled: true  # Set to false to disable Spotify integration
+  google_calendar:
+    enabled: true  # Set to false to disable Google Calendar
+  google_search:
+    enabled: true  # Set to false to disable Google Search
 
 # Spotify Integration
 spotify:

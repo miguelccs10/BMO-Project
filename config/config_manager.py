@@ -93,6 +93,16 @@ class WakeWordConfig(BaseModel):
     audio: WakeWordAudioConfig
 
 
+class VADConfig(BaseModel):
+    """Voice Activity Detection configuration."""
+    enabled: bool = True
+    threshold: float = Field(ge=0.0, le=1.0, default=0.5)
+    min_speech_duration_ms: int = Field(gt=0, default=250)
+    min_silence_duration_ms: int = Field(gt=0, default=700)
+    max_recording_seconds: int = Field(gt=0, default=30)
+    speech_pad_ms: int = Field(ge=0, default=300)
+
+
 class RecordingConfig(BaseModel):
     """Audio recording configuration."""
     duration_seconds: int
@@ -102,6 +112,19 @@ class RecordingConfig(BaseModel):
     format: str
     input_device_index: Optional[int] = None
     buffer_clear_duration_ms: int
+    vad: VADConfig
+
+
+class ToolEnabledConfig(BaseModel):
+    """Individual tool enable/disable configuration."""
+    enabled: bool = True
+
+
+class ToolsConfig(BaseModel):
+    """Tools enable/disable configuration."""
+    spotify: ToolEnabledConfig
+    google_calendar: ToolEnabledConfig
+    google_search: ToolEnabledConfig
 
 
 class SpotifyConfig(BaseModel):
@@ -179,6 +202,7 @@ class BMOConfig(BaseModel):
     stt: STTConfig
     wake_word: WakeWordConfig
     recording: RecordingConfig
+    tools: ToolsConfig
     spotify: SpotifyConfig
     google_calendar: GoogleCalendarConfig
     google_cloud: GoogleCloudConfig
@@ -355,6 +379,22 @@ class ConfigManager:
     def USER_NAME(self) -> str:
         """Get configured user name."""
         return self.config.project.user_name
+
+    def is_tool_enabled(self, tool_name: str) -> bool:
+        """
+        Check if a tool is enabled.
+
+        Args:
+            tool_name: Name of the tool (spotify, google_calendar, google_search)
+
+        Returns:
+            True if tool is enabled, False otherwise
+        """
+        tool_config = getattr(self.config.tools, tool_name, None)
+        if tool_config is None:
+            print(f"⚠️  Warning: Unknown tool '{tool_name}'")
+            return False
+        return tool_config.enabled
 
 
 # Singleton instance
