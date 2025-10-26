@@ -1,35 +1,37 @@
-# config/settings.py
-# Ponto central para todas as configurações e chaves de API do projeto.
+"""
+Legacy settings module for backward compatibility.
+New code should use config_manager.get_config() instead.
 
-import os
-from dotenv import load_dotenv
+This module provides the same interface as the old settings.py,
+but now loads all values from the YAML-based configuration system.
+"""
 
-# --- Carregamento do .env ---
-# Define o caminho para a raiz do projeto para encontrar o arquivo .env
-# Isso garante que funcione, não importa de onde o script seja chamado.
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-load_dotenv(dotenv_path=os.path.join(BASE_DIR, ".env"))
+from config.config_manager import get_config
+
+# Load configuration
+_config = get_config()
 
 # --- Versão do Projeto ---
-BMO_VERSION = "4.0"
+BMO_VERSION = _config.BMO_VERSION
 
-# --- Chaves de API ---
+# --- Base Directory ---
+BASE_DIR = str(_config.BASE_DIR)
+
+# --- Chaves de API (from environment variables) ---
 print("🔑 Carregando chaves de API do .env...")
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-SPOTIPY_CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
-SPOTIPY_CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
-ELEVEN_LABS_API_KEY = os.getenv("ELEVEN_LABS_API_KEY")
+GROQ_API_KEY = _config.get_api_key("groq")
+GOOGLE_API_KEY = _config.get_api_key("google")
+GOOGLE_CSE_ID = _config.get_api_key("google_cse_id")
+SPOTIPY_CLIENT_ID = _config.get_api_key("spotify_client_id")
+SPOTIPY_CLIENT_SECRET = _config.get_api_key("spotify_client_secret")
+ELEVEN_LABS_API_KEY = _config.get_api_key("elevenlabs")
 
-# --- Configuração de Rastreamento (para remover avisos) ---
-os.environ["LANGCHAIN_TRACING_V2"] = os.getenv("LANGCHAIN_TRACING_V2", "false")
-os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY", "")
+# --- TTS Configuration ---
+TTS_ENGINE = _config.config.tts.engine
+GOOGLE_TTS_VOICE_NAME = _config.config.tts.google.voice_name
+COQUI_VOICE_SAMPLE_PATH = str(_config.get_tts_voice_sample_path()) if _config.get_tts_voice_sample_path() else ""
 
-# --- Configuração do Motor de Voz (TTS) ---
-# Opções: "google", "coqui", "elevenlabs"
-TTS_ENGINE = "google"
-GOOGLE_TTS_VOICE_NAME = "pt-BR-Chirp3-HD-Erinome"
-COQUI_VOICE_SAMPLE_PATH = os.path.join(BASE_DIR, "bmo_voice_sample.wav")
+# --- User Configuration ---
+USER_NAME = _config.USER_NAME
 
-# --- Nome do Usuário ---
-USER_NAME = "Miguel"
+# Note: Environment variables for LangChain are already set by ConfigManager

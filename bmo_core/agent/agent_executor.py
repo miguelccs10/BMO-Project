@@ -1,10 +1,13 @@
-# bmo_core/agent/agent_executor.py
-# Monta e exporta o agente LangChain com memória e roteamento.
+"""
+BMO Agent Executor
+Builds and exports the LangChain agent with memory and intelligent routing.
+Refactored to use YAML-based configuration following best practices.
+"""
 
 import traceback
-import json
+from typing import Optional
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables import RunnableBranch, RunnablePassthrough
+from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableLambda
 from langchain_groq import ChatGroq
@@ -12,93 +15,154 @@ from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain import hub
 from pydantic import BaseModel, Field
 
-# --- Imports da Nova Estrutura ---
-from config import settings
-from config import prompts
-# A lógica de memória foi movida para o seu próprio módulo
-from bmo_core.agent.memory import wrap_with_memory, get_session_history 
-from bmo_core.tools.spotify import play_music_on_spotify, control_spotify_playback, get_current_spotify_song
+# --- Imports from new configuration system ---
+from config.config_manager import get_config
+from bmo_core.agent.memory import wrap_with_memory
+from bmo_core.tools.spotify import (
+    play_music_on_spotify,
+    control_spotify_playback,
+    get_current_spotify_song
+)
 from bmo_core.tools.calendar import get_next_appointment
 from bmo_core.tools.search import google_search_tool
 
-# Modelo de dados para a saída do roteador.
+
 class RouteQuery(BaseModel):
-    destination: str = Field(description="O destino para rotear a pergunta. Pode ser 'ferramentas' ou 'conversa'.")
+    """Model for router output validation."""
+    destination: str = Field(
+        description="O destino para rotear a pergunta. Pode ser 'ferramentas' ou 'conversa'."
+    )
+
 
 class BMOAgent:
+    """
+    BMO LangChain Agent with intelligent routing between conversation and tools.
+
+    This agent uses a three-tier architecture:
+    1. Router: Decides between conversation and tool usage
+    2. Conversation Chain: Handles general conversation
+    3. Tool Agent Chain: Handles tool-based actions (Spotify, Calendar, Search)
+
+    All chains share the same conversation memory for context awareness.
+    """
+
     def __init__(self):
-        self.agent_with_chat_history = None
+        """Initialize the BMO agent with configuration from YAML."""
+        self.config = get_config()
+        self.agent_with_chat_history: Optional[object] = None
+
         try:
-            # --- LLMs ---
-            modelo_groq_atual = "llama-3.1-8b-instant"
-
-            router_llm = ChatGroq(temperature=0, model_name=modelo_groq_atual, groq_api_key=settings.GROQ_API_KEY)
-            agent_llm = ChatGroq(temperature=0.7, model_name=modelo_groq_atual, groq_api_key=settings.GROQ_API_KEY)
-            
-            # --- CADEIA DE CONVERSA ---
-            conv_prompt = ChatPromptTemplate.from_messages([
-                ("system", prompts.BMO_SYSTEM_PROMPT),
-                MessagesPlaceholder(variable_name="chat_history"),
-                ("human", "{input}")
-            ])
-            conversation_chain = conv_prompt | agent_llm | StrOutputParser()
-
-            # --- AGENTE DE FERRAMENTAS ---
-            tools = [play_music_on_spotify, 
-                    control_spotify_playback,
-                    get_current_spotify_song,
-                    get_next_appointment,
-                    google_search_tool
-                ]
-            agent_prompt = hub.pull("hwchase17/openai-tools-agent")
-            agent = create_openai_tools_agent(agent_llm, tools, agent_prompt)
-            tool_agent_chain = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
-
-            # --- ROTEADOR ESTRUTURADO ---
-            router_prompt = ChatPromptTemplate.from_template(prompts.ROUTER_TEMPLATE)
-            structured_router = router_llm.with_structured_output(RouteQuery)
-            router_chain = router_prompt | structured_router
-            
-            # --- CADEIA PRINCIPAL COM ROTEAMENTO ---
-            def route(info):
-                if "ferramentas" in info["destination"].destination.lower():
-                    return tool_agent_chain
-                else:
-                    return conversation_chain
-            
-            # O RunnablePassthrough garante que o input original seja mantido
-            # para ser usado pela cadeia de destino (conversa ou ferramentas).
-            full_chain = RunnablePassthrough.assign(
-                destination=lambda x: router_chain.invoke({"input": x["input"], "chat_history": x["chat_history"]})
-            ) | RunnableLambda(lambda x: route(x).invoke(x))
-
-            # --- ESTRUTURA DE MEMÓRIA ---
-            self.agent_with_chat_history = wrap_with_memory(full_chain)
-            
-            print("✅ Agente BMO inicializado.")
-
+            self._build_agent()
+            print("✅ Agente BMO inicializado com sucesso.")
         except Exception as e:
-            print(f"❌ ERRO: Falha ao inicializar o BMOAgent. {e}"); traceback.print_exc()
+            print(f"❌ ERRO: Falha ao inicializar o BMOAgent. {e}")
+            traceback.print_exc()
+
+    def _build_agent(self):
+        """Build the agent with all components."""
+        # --- LLM Configuration ---
+        llm_config = self.config.config.llm
+        groq_api_key = self.config.get_api_key("groq")
+
+        if not groq_api_key:
+            raise ValueError("GROQ_API_KEY not found in environment")
+
+        # Create LLMs with different temperatures for different purposes
+        router_llm = ChatGroq(
+            temperature=llm_config.temperatures.router,
+            model_name=llm_config.model_name,
+            groq_api_key=groq_api_key
+        )
+
+        agent_llm = ChatGroq(
+            temperature=llm_config.temperatures.agent,
+            model_name=llm_config.model_name,
+            groq_api_key=groq_api_key
+        )
+
+        # --- Conversation Chain ---
+        conv_prompt = ChatPromptTemplate.from_messages([
+            ("system", self.config.get_system_prompt()),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "{input}")
+        ])
+        conversation_chain = conv_prompt | agent_llm | StrOutputParser()
+
+        # --- Tool Agent Chain ---
+        tools = [
+            play_music_on_spotify,
+            control_spotify_playback,
+            get_current_spotify_song,
+            get_next_appointment,
+            google_search_tool
+        ]
+
+        # Load the standard OpenAI tools agent prompt from LangChain Hub
+        agent_prompt = hub.pull("hwchase17/openai-tools-agent")
+        agent = create_openai_tools_agent(agent_llm, tools, agent_prompt)
+
+        tool_agent_chain = AgentExecutor(
+            agent=agent,
+            tools=tools,
+            verbose=llm_config.agent.verbose,
+            handle_parsing_errors=llm_config.agent.handle_parsing_errors,
+            max_iterations=llm_config.agent.max_iterations
+        )
+
+        # --- Structured Router ---
+        router_prompt = ChatPromptTemplate.from_template(
+            self.config.get_router_template()
+        )
+        structured_router = router_llm.with_structured_output(RouteQuery)
+        router_chain = router_prompt | structured_router
+
+        # --- Main Chain with Routing Logic ---
+        def route(info):
+            """Route to appropriate chain based on router decision."""
+            destination = info["destination"].destination.lower()
+            if "ferramentas" in destination:
+                return tool_agent_chain
+            else:
+                return conversation_chain
+
+        # Build the full chain with routing
+        full_chain = RunnablePassthrough.assign(
+            destination=lambda x: router_chain.invoke({
+                "input": x["input"],
+                "chat_history": x["chat_history"]
+            })
+        ) | RunnableLambda(lambda x: route(x).invoke(x))
+
+        # --- Add Memory Management ---
+        self.agent_with_chat_history = wrap_with_memory(full_chain)
 
     def run(self, user_question: str, session_id: str = "default_session") -> str:
         """
-        Executa a cadeia principal do agente com a pergunta do usuário e o ID da sessão.
-        A lógica de gerenciamento de memória foi abstraída para o módulo de memória.
+        Execute the agent with a user question.
+
+        Args:
+            user_question: The user's input text
+            session_id: Session identifier for conversation memory
+
+        Returns:
+            The agent's response as a string
         """
-        if not self.agent_with_chat_history: 
-            return "Desculpe, meu cérebro está com um parafuso solto."
+        if not self.agent_with_chat_history:
+            return self.config.prompts.errors["brain_error"]
+
         try:
-            # A invocação é simples. Passamos o input e a configuração da sessão.
-            # O RunnableWithMessageHistory cuida de carregar e salvar o histórico.
+            # Invoke the agent with memory management
             response = self.agent_with_chat_history.invoke(
                 {"input": user_question},
                 config={"configurable": {"session_id": session_id}}
             )
 
-            # A saída pode ser um dicionário (do agente) ou uma string (da conversa)
+            # Handle both dict (from agent) and string (from conversation) responses
             if isinstance(response, dict):
-                return response.get('output', 'Oh não... algo deu errado na resposta do agente.')
+                return response.get('output', self.config.prompts.errors["parsing_error"])
             return response
+
         except Exception as e:
-            print(f"❌ ERRO: Falha ao invocar a cadeia principal. {e}"); traceback.print_exc()
-            return "Ops... tive um curto-circuito!"
+            print(f"❌ ERRO: Falha ao invocar a cadeia principal. {e}")
+            traceback.print_exc()
+            return self.config.prompts.errors["agent_error"]

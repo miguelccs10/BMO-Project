@@ -37,6 +37,10 @@ google-cloud-texttospeech>=2.17.2
 # Wake word detection
 openwakeword>=0.5.1
 
+# Configuration management
+pyyaml>=6.0.1
+pydantic>=2.0.0
+
 # Hardware (uncomment based on your device)
 # RPi.GPIO>=0.7.1  # For Raspberry Pi
 # Jetson.GPIO  # For NVIDIA Jetson (install separately with sudo)

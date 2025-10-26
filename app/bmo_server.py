@@ -1,99 +1,120 @@
-# app/bmo_server.py
-# Versão 4.0 (Restaurada): Arquitetura Flask com Agente LangChain e Hardware Flexível.
-# Usa o servidor de desenvolvimento padrão do Flask para agilidade.
+"""
+bmo_server.py
+Flask server with WebSocket support for web-based BMO interaction.
+Refactored to use YAML-based configuration following best practices.
+"""
 
-# --- DEFINIÇÃO DE CAMINHOS E CREDENCIAIS (A MESMA LÓGICA DO bmo.py) ---
-# .parent.parent sobe dois níveis para chegar na raiz do projeto (de bmo_server.py -> app -> BMO-Project)
-BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.append(str(BASE_DIR))
-
-# Define o caminho para as credenciais do Google ANTES de qualquer import do projeto.
-credentials_path = BASE_DIR / "google_adc_credentials.json"
-if os.path.exists(credentials_path):
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(credentials_path)
-else:
-    # Este aviso aparecerá ANTES do print de "Iniciando Sistemas", o que é bom.
-    print(f"⚠️  AVISO: Arquivo de credenciais ADC '{credentials_path}' não encontrado. APIs do Google podem falhar.")
-
-from config import settings
-
-print(f"--- Running BMO Server v{settings.BMO_VERSION} (Flask Dev Mode) ---")
-
+import os
+import sys
 import tempfile
 import traceback
+from pathlib import Path
 from flask import Flask, render_template_string
 from flask_sock import Sock
 from pydub import AudioSegment
 from simple_websocket.errors import ConnectionClosed
 
-# --- Imports dos Módulos BMO ---
+# --- Setup paths before imports ---
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE_DIR))
+
+# Load configuration early
+from config.config_manager import get_config
+
+config = get_config()
+
+# Setup Google credentials
+credentials_path = config.BASE_DIR / config.config.google_cloud.adc_credentials_file
+if credentials_path.exists():
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(credentials_path)
+else:
+    print(f"⚠️  AVISO: Arquivo de credenciais ADC '{credentials_path}' não encontrado. APIs do Google podem falhar.")
+
+print(f"--- Running BMO Server v{config.BMO_VERSION} (Flask Dev Mode) ---")
+
+# --- Import BMO Modules ---
 from bmo_core.agent.agent_executor import BMOAgent
 from bmo_core.services.audio_manager import AudioManager
 from bmo_core.services.hardware_manager import HardwareManager
 from bmo_core.services.display_manager import DisplayManager
 
-# --- Inicialização do Flask ---
+# --- Initialize Flask ---
 app = Flask(__name__)
 sock = Sock(app)
 
-# --- Inicialização dos Módulos BMO ---
+# --- Initialize BMO Modules ---
 print("✅ Inicializando módulos do BMO...")
 hardware_manager = HardwareManager()
 display_manager = DisplayManager()
 bmo_agent = BMOAgent()
-audio_manager = AudioManager(hardware_manager) 
+audio_manager = AudioManager(hardware_manager)
 print("✅ Servidor BMO pronto para receber conexões.")
 
-# --- Rota para a Página Web Principal ---
+
 @app.route('/')
 def index():
-    """Serve o arquivo index.html da pasta /web."""
-    web_folder_path = os.path.join(settings.BASE_DIR, 'web')
+    """Serve the main web interface."""
+    web_folder_path = config.get_path('web_folder')
+    index_file = web_folder_path / 'index.html'
+
     try:
-        with open(os.path.join(web_folder_path, 'index.html'), 'r', encoding='utf-8') as f:
+        with open(index_file, 'r', encoding='utf-8') as f:
             return render_template_string(f.read())
     except FileNotFoundError:
-        return "<h1>Erro: web/index.html não encontrado.</h1>", 404
+        return f"<h1>Erro: {index_file} não encontrado.</h1>", 404
 
-# --- Rota para a Conexão de Áudio WebSocket ---
+
 @sock.route('/audio')
 def handle_audio_connection(ws):
-    """Gerencia o ciclo de vida de cada cliente WebSocket."""
+    """
+    Handle WebSocket audio connection.
+    Receives audio from browser, processes with BMO agent, sends back TTS response.
+    """
     print(f"🔗 Cliente conectado via WebSocket: {ws.environ.get('REMOTE_ADDR')}")
     display_manager.draw_face("happy")
+
     try:
         while ws.connected:
             received_data = ws.receive()
             if received_data is None:
                 break
-            
+
             print("\n--- Novo Pedido Recebido ---")
-            display_manager.draw_face("listening"); hardware_manager.led_on()
+            display_manager.draw_face("listening")
+            hardware_manager.led_on()
 
             input_filename, wav_filename, response_audio_filename = None, None, None
+
             try:
+                # Save received WebM audio
                 with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as input_file:
                     input_filename = input_file.name
                     input_file.write(received_data)
-                
+
+                # Convert to WAV
                 with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as wav_file:
                     wav_filename = wav_file.name
-                
+
                 audio = AudioSegment.from_file(input_filename, format="webm")
                 audio.export(wav_filename, format="wav")
 
+                # Transcribe
                 display_manager.draw_face("thinking")
                 user_question = audio_manager.transcribe_from_file(wav_filename)
-                
+
                 if user_question:
                     print(f"   Você disse: '{user_question}'")
                     print("🧠 Pedindo resposta ao BMO...")
+
+                    # Process with agent (no session_id = new session each connection)
                     ai_response = bmo_agent.run(user_question)
                     print(f"   BMO respondeu: '{ai_response}'")
 
+                    # Generate TTS
                     display_manager.draw_face("speaking")
                     response_audio_filename = audio_manager.text_to_speech_file(ai_response)
-                    
+
+                    # Send response back
                     if response_audio_filename:
                         print("⬆️  Enviando áudio para o cliente...")
                         with open(response_audio_filename, "rb") as f:
@@ -101,32 +122,54 @@ def handle_audio_connection(ws):
                         print("✅ Resposta enviada!")
                 else:
                     print("   ⚠️ Não foi possível transcrever. Enviando resposta de erro.")
-                    response_audio_filename = audio_manager.text_to_speech_file("Bip bop... Não ouvi, pode repetir?")
+                    error_msg = config.prompts.responses["audio_system_offline"]
+                    response_audio_filename = audio_manager.text_to_speech_file(error_msg)
                     if response_audio_filename:
-                        with open(response_audio_filename, "rb") as f: ws.send(f.read())
+                        with open(response_audio_filename, "rb") as f:
+                            ws.send(f.read())
+
+            except Exception as e:
+                print(f"❌ Erro ao processar áudio: {e}")
+                traceback.print_exc()
+
             finally:
+                # Cleanup temp files
                 print("🧹 Limpando arquivos temporários...")
                 for f in [input_filename, wav_filename, response_audio_filename]:
-                    if f and os.path.exists(f): os.remove(f)
-                display_manager.draw_face("neutral"); hardware_manager.led_off()
+                    if f and os.path.exists(f):
+                        os.remove(f)
+                display_manager.draw_face("neutral")
+                hardware_manager.led_off()
 
     except ConnectionClosed:
-        # Captura o fechamento normal da conexão e não mostra um erro feio.
         print("   Conexão fechada normalmente pelo cliente.")
     except Exception as e:
-        # Captura todos os outros erros inesperados.
-        print(f"❌ Erro inesperado na conexão WebSocket: {e}"); traceback.print_exc()
+        print(f"❌ Erro inesperado na conexão WebSocket: {e}")
+        traceback.print_exc()
     finally:
         print(f"👋 Cliente desconectado: {ws.environ.get('REMOTE_ADDR')}")
-        display_manager.draw_face("neutral"); hardware_manager.led_off()
+        display_manager.draw_face("neutral")
+        hardware_manager.led_off()
 
-# --- PONTO DE ENTRADA (Restaurado para Desenvolvimento Rápido) ---
-if __name__ == "__main__":
+
+def main():
+    """Start the Flask development server."""
     try:
-        print("🚀 Iniciando servidor de desenvolvimento Flask em http://0.0.0.0:5000...")
-        app.run(host="0.0.0.0", port=5000, debug=False)
+        server_config = config.config.server
+        print(f"🚀 Iniciando servidor Flask em http://{server_config.host}:{server_config.port}...")
+        app.run(
+            host=server_config.host,
+            port=server_config.port,
+            debug=server_config.debug
+        )
     except KeyboardInterrupt:
         print("\n👋 Servidor desligado.")
     finally:
-        if 'display_manager' in globals() and hasattr(display_manager, 'clear'): display_manager.clear()
-        if 'hardware_manager' in globals() and hasattr(hardware_manager, 'cleanup'): hardware_manager.cleanup()
+        if hasattr(display_manager, 'clear'):
+            display_manager.clear()
+        if hasattr(hardware_manager, 'cleanup'):
+            hardware_manager.cleanup()
+
+
+if __name__ == "__main__":
+    main()
