@@ -28,8 +28,22 @@ elif config.config.tts.engine == "coqui":
 
 from groq import Groq
 
-# Lazy import for Silero VAD (only when needed)
+# Lazy imports for local models
 _silero_vad_model = None
+_faster_whisper_model = None
+_piper_tts_model = None
+
+try:
+    from faster_whisper import WhisperModel
+    FASTER_WHISPER_AVAILABLE = True
+except ImportError:
+    FASTER_WHISPER_AVAILABLE = False
+
+try:
+    import piper
+    PIPER_AVAILABLE = True
+except ImportError:
+    PIPER_AVAILABLE = False
 
 
 def get_silero_vad_model():
@@ -79,17 +93,28 @@ class AudioManager:
         self._init_tts()
 
     def _init_stt(self):
-        """Initialize Speech-to-Text client."""
-        try:
-            groq_api_key = self.config.get_api_key("groq")
-            if not groq_api_key:
-                raise ValueError("GROQ_API_KEY not found")
+        """Initialize Speech-to-Text client based on mode."""
+        stt_config = self.config.config.stt
+        mode = stt_config.mode.lower()
 
-            self.groq_client = Groq(api_key=groq_api_key)
-            print("✅ Cliente da Groq para Whisper (STT) inicializado.")
-        except Exception as e:
-            self.groq_client = None
-            print(f"❌ ERRO ao inicializar cliente Groq: {e}")
+        print(f"🎤 Inicializando STT em modo '{mode}'...")
+
+        # Initialize cloud STT (Groq)
+        if mode in ["cloud", "hybrid"]:
+            try:
+                groq_api_key = self.config.get_api_key("groq")
+                if not groq_api_key:
+                    raise ValueError("GROQ_API_KEY not found")
+
+                self.groq_client = Groq(api_key=groq_api_key)
+                print("   ☁️  Groq Whisper (cloud) inicializado.")
+            except Exception as e:
+                self.groq_client = None
+                print(f"   ⚠️  ERRO ao inicializar Groq: {e}")
+
+        # Initialize local STT (faster-whisper)
+        if mode in ["local", "hybrid"]:
+            self._init_local_stt()
 
     def _init_tts(self):
         """Initialize Text-to-Speech engine based on configuration."""
@@ -99,6 +124,8 @@ class AudioManager:
             self._init_google_tts()
         elif self.tts_engine == "coqui":
             self._init_coqui_tts()
+        elif self.tts_engine == "piper":
+            self._init_piper_tts()
         elif self.tts_engine == "elevenlabs":
             self._init_elevenlabs_tts()
         else:
@@ -148,6 +175,49 @@ class AudioManager:
         """Initialize ElevenLabs TTS (placeholder for future implementation)."""
         print("⚠️  ElevenLabs TTS ainda não implementado.")
         self.tts_engine = None
+
+    def _init_piper_tts(self):
+        """Initialize Piper TTS for fast local synthesis."""
+        if not PIPER_AVAILABLE:
+            print("❌ ERRO: piper-tts não instalado. Execute: pip install piper-tts")
+            self.tts_engine = None
+            return
+
+        print("⏳ Inicializando Piper TTS...")
+        try:
+            # Piper will be initialized on first use (lazy loading)
+            print("✅ Piper TTS configurado (carregamento sob demanda).")
+        except Exception as e:
+            print(f"❌ ERRO ao configurar Piper TTS: {e}")
+            traceback.print_exc()
+            self.tts_engine = None
+
+    def _init_local_stt(self):
+        """Initialize local STT with faster-whisper."""
+        global _faster_whisper_model
+
+        if not FASTER_WHISPER_AVAILABLE:
+            print("   ⚠️  faster-whisper não instalado. Execute: pip install faster-whisper")
+            return
+
+        if _faster_whisper_model is not None:
+            print("   ✓ faster-whisper já carregado.")
+            return
+
+        try:
+            local_config = self.config.config.stt.local
+            print(f"   ⏳ Carregando faster-whisper modelo '{local_config.model}'...")
+
+            _faster_whisper_model = WhisperModel(
+                local_config.model,
+                device=local_config.device,
+                compute_type=local_config.compute_type
+            )
+            print(f"   🖥️  faster-whisper '{local_config.model}' carregado com sucesso.")
+        except Exception as e:
+            print(f"   ❌ ERRO ao carregar faster-whisper: {e}")
+            traceback.print_exc()
+            _faster_whisper_model = False  # Mark as failed
 
     def record_with_vad(self, stream, audio_interface, clear_buffer: bool = True) -> Tuple[Optional[str], float]:
         """
@@ -328,7 +398,7 @@ class AudioManager:
 
     def transcribe_from_file(self, audio_file_path: str) -> Optional[str]:
         """
-        Transcribe audio file to text using Groq Whisper.
+        Transcribe audio file to text (cloud or local).
 
         Args:
             audio_file_path: Path to audio file
@@ -336,15 +406,58 @@ class AudioManager:
         Returns:
             Transcribed text or None if error
         """
+        stt_config = self.config.config.stt
+        mode = stt_config.mode.lower()
+
+        # Try local first if local or hybrid
+        if mode in ["local", "hybrid"]:
+            result = self._transcribe_local(audio_file_path)
+            if result is not None:
+                return result
+            elif mode == "local":
+                print("❌ ERRO: Transcrição local falhou e modo local está ativo.")
+                return None
+            print("⚠️  Transcrição local falhou, tentando cloud...")
+
+        # Cloud or hybrid fallback
+        return self._transcribe_cloud(audio_file_path)
+
+    def _transcribe_local(self, audio_file_path: str) -> Optional[str]:
+        """Transcribe using local faster-whisper."""
+        global _faster_whisper_model
+
+        if _faster_whisper_model is None or _faster_whisper_model is False:
+            return None
+
+        try:
+            local_config = self.config.config.stt.local
+            segments, info = _faster_whisper_model.transcribe(
+                audio_file_path,
+                language=local_config.language,
+                beam_size=local_config.beam_size
+            )
+
+            # Combine all segments
+            text = " ".join([segment.text for segment in segments])
+            return text.strip()
+
+        except Exception as e:
+            print(f"❌ ERRO ao transcrever com faster-whisper: {e}")
+            traceback.print_exc()
+            return None
+
+    def _transcribe_cloud(self, audio_file_path: str) -> Optional[str]:
+        """Transcribe using cloud Groq Whisper API."""
         if not self.groq_client:
             return self.config.prompts.responses["audio_system_offline"]
 
         try:
+            cloud_config = self.config.config.stt.cloud
             with open(audio_file_path, "rb") as file:
                 transcription = self.groq_client.audio.transcriptions.create(
                     file=(audio_file_path, file.read()),
-                    model=self.config.config.stt.model,
-                    language=self.config.config.stt.language
+                    model=cloud_config.model,
+                    language=cloud_config.language
                 )
             return transcription.text
         except Exception as e:
@@ -372,6 +485,8 @@ class AudioManager:
             return self._tts_google(text)
         elif self.tts_engine == "coqui":
             return self._tts_coqui(text)
+        elif self.tts_engine == "piper":
+            return self._tts_piper(text)
 
         return None
 
@@ -453,5 +568,62 @@ class AudioManager:
 
         except Exception as e:
             print(f"❌ ERRO no motor Coqui TTS: {e}")
+            traceback.print_exc()
+            return None
+
+    def _tts_piper(self, text: str) -> Optional[str]:
+        """
+        Generate speech using Piper TTS (fast local).
+
+        Args:
+            text: Text to convert
+
+        Returns:
+            Path to generated WAV file
+        """
+        if not PIPER_AVAILABLE:
+            print("❌ Piper TTS não disponível.")
+            return None
+
+        output_filename = str(self.config.get_path('response_audio_wav'))
+
+        try:
+            import subprocess
+            import json
+
+            piper_config = self.config.config.tts.piper
+
+            # Build piper command
+            cmd = [
+                "piper",
+                "--model", piper_config.voice,
+                "--output_file", output_filename
+            ]
+
+            if piper_config.length_scale != 1.0:
+                cmd.extend(["--length_scale", str(piper_config.length_scale)])
+
+            if piper_config.speaker is not None:
+                cmd.extend(["--speaker", str(piper_config.speaker)])
+
+            # Run piper
+            process = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+
+            stdout, stderr = process.communicate(input=text)
+
+            if process.returncode != 0:
+                print(f"❌ ERRO no Piper TTS: {stderr}")
+                return None
+
+            return output_filename
+
+        except Exception as e:
+            print(f"❌ ERRO no motor Piper TTS: {e}")
             traceback.print_exc()
             return None
