@@ -34,10 +34,25 @@ class AgentConfig(BaseModel):
     handle_parsing_errors: bool
 
 
+class LLMCloudConfig(BaseModel):
+    """Cloud LLM configuration."""
+    provider: str = "groq"
+    model_name: str
+
+
+class LLMLocalConfig(BaseModel):
+    """Local LLM configuration."""
+    provider: str = "ollama"
+    model: str
+    base_url: str = "http://localhost:11434"
+    timeout: int = 120
+
+
 class LLMConfig(BaseModel):
     """LLM provider and model configuration."""
-    provider: str
-    model_name: str
+    mode: str = Field(pattern="^(cloud|local|hybrid)$")
+    cloud: LLMCloudConfig
+    local: LLMLocalConfig
     temperatures: LLMTemperatures
     agent: AgentConfig
 
@@ -57,6 +72,14 @@ class CoquiTTSConfig(BaseModel):
     split_sentences: bool
 
 
+class PiperTTSConfig(BaseModel):
+    """Piper TTS configuration."""
+    voice: str = "pt_BR-faber-medium"
+    quality: str = "medium"
+    speaker: Optional[int] = None
+    length_scale: float = 1.0
+
+
 class ElevenLabsTTSConfig(BaseModel):
     """ElevenLabs TTS configuration."""
     voice_id: Optional[str] = None
@@ -67,14 +90,32 @@ class TTSConfig(BaseModel):
     engine: str
     google: GoogleTTSConfig
     coqui: CoquiTTSConfig
+    piper: PiperTTSConfig
     elevenlabs: ElevenLabsTTSConfig
+
+
+class STTCloudConfig(BaseModel):
+    """Cloud STT configuration."""
+    provider: str = "groq"
+    model: str
+    language: str
+
+
+class STTLocalConfig(BaseModel):
+    """Local STT configuration."""
+    provider: str = "faster-whisper"
+    model: str = "small"
+    device: str = "cpu"
+    compute_type: str = "int8"
+    language: str = "pt"
+    beam_size: int = 5
 
 
 class STTConfig(BaseModel):
     """Speech-to-Text configuration."""
-    provider: str
-    model: str
-    language: str
+    mode: str = Field(pattern="^(cloud|local|hybrid)$")
+    cloud: STTCloudConfig
+    local: STTLocalConfig
 
 
 class WakeWordAudioConfig(BaseModel):
@@ -111,6 +152,7 @@ class RecordingConfig(BaseModel):
     chunk_size: int
     format: str
     input_device_index: Optional[int] = None
+    output_device_index: Optional[int] = None
     buffer_clear_duration_ms: int
     vad: VADConfig
 
