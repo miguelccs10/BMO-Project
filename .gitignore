@@ -14,3 +14,4 @@ token.json
 training_samples/google-cloud-cli-linux-x86_64.tar.gz
 *.tar.gz
 temp_question.wav
+credentials/
