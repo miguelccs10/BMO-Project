@@ -5,6 +5,7 @@ langchain-community>=0.2.16
 langchain-groq>=0.1.9
 langchain-openai>=0.1.23
 langchain-google-community>=1.0.8
+langchain-ollama>=0.1.0  # For local LLM support
 
 # Web framework
 Flask>=3.0.3
@@ -45,3 +46,8 @@ pydantic>=2.0.0
 # RPi.GPIO>=0.7.1  # For Raspberry Pi
 # Jetson.GPIO  # For NVIDIA Jetson (install separately with sudo)
 # adafruit-circuitpython-ssd1306>=2.12.15  # For OLED display
+
+# Local Models Support (Optional - install if running locally)
+# faster-whisper>=1.0.0  # Local STT - Recommended for RPi
+# piper-tts>=1.2.0  # Local TTS - Very fast on CPU
+# Note: Ollama server must be installed separately (see docs/LOCAL_MODELS.md)
