@@ -8,6 +8,7 @@ import os
 import sys
 from pathlib import Path
 import uuid
+import traceback
 import pyaudio
 import numpy as np
 from openwakeword.model import Model
@@ -95,7 +96,7 @@ def record_question_vad(stream, audio_interface):
         return None
 
 
-def play_response(audio_file_path, stream):
+def play_response(audio_file_path, stream, audio_interface):
     """Play TTS response and manage stream state."""
     if not audio_file_path or not os.path.exists(audio_file_path):
         return
@@ -106,10 +107,43 @@ def play_response(audio_file_path, stream):
     display.draw_face("speaking")
 
     try:
-        sound = AudioSegment.from_file(audio_file_path)
-        play(sound)
+        # Check if output device is configured
+        output_device = config.config.recording.output_device_index
+
+        if output_device is not None:
+            # Use configured output device with PyAudio
+            sound = AudioSegment.from_file(audio_file_path)
+
+            # Export to raw audio for PyAudio playback
+            raw_data = sound.raw_data
+            sample_rate = sound.frame_rate
+            channels = sound.channels
+            sample_width = sound.sample_width
+
+            # Create output stream with specified device
+            output_stream = audio_interface.open(
+                format=audio_interface.get_format_from_width(sample_width),
+                channels=channels,
+                rate=sample_rate,
+                output=True,
+                output_device_index=output_device
+            )
+
+            # Play audio
+            chunk_size = 1024
+            for i in range(0, len(raw_data), chunk_size):
+                output_stream.write(raw_data[i:i+chunk_size])
+
+            output_stream.stop_stream()
+            output_stream.close()
+        else:
+            # Use default output (pydub's play)
+            sound = AudioSegment.from_file(audio_file_path)
+            play(sound)
+
     except Exception as e:
         print(f"❌ Erro ao reproduzir o áudio: {e}")
+        traceback.print_exc()
     finally:
         if os.path.exists(audio_file_path):
             os.remove(audio_file_path)
@@ -142,7 +176,7 @@ def conversation_cycle(audio_stream, audio_interface):
             session_id=BMO_SESSION_ID
         )
         response_audio_path = audio_manager.text_to_speech_file(ai_response)
-        play_response(response_audio_path, audio_stream)
+        play_response(response_audio_path, audio_stream, audio_interface)
         return
 
     # Process with agent
@@ -152,7 +186,7 @@ def conversation_cycle(audio_stream, audio_interface):
 
     # Generate and play response
     response_audio_path = audio_manager.text_to_speech_file(ai_response)
-    play_response(response_audio_path, audio_stream)
+    play_response(response_audio_path, audio_stream, pa)
 
     hardware.led_off()
     display.draw_face("neutral")
@@ -174,6 +208,21 @@ def main():
 
     # Setup audio stream
     pa = pyaudio.PyAudio()
+
+    # Display audio device info
+    if INPUT_DEVICE_INDEX is not None:
+        input_info = pa.get_device_info_by_index(INPUT_DEVICE_INDEX)
+        print(f"🎤 Dispositivo de entrada: [{INPUT_DEVICE_INDEX}] {input_info['name']}")
+    else:
+        print(f"🎤 Dispositivo de entrada: [default]")
+
+    output_device = config.config.recording.output_device_index
+    if output_device is not None:
+        output_info = pa.get_device_info_by_index(output_device)
+        print(f"🔊 Dispositivo de saída: [{output_device}] {output_info['name']}")
+    else:
+        print(f"🔊 Dispositivo de saída: [default]")
+
     audio_stream = pa.open(
         rate=RATE,
         channels=config.config.wake_word.audio.channels,
