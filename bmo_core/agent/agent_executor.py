@@ -17,6 +17,13 @@ from pydantic import BaseModel, Field
 
 # --- Imports from new configuration system ---
 from config.config_manager import get_config
+
+# Lazy imports for local models
+try:
+    from langchain_ollama import ChatOllama
+    OLLAMA_AVAILABLE = True
+except ImportError:
+    OLLAMA_AVAILABLE = False
 from bmo_core.agent.memory import wrap_with_memory
 from bmo_core.tools.spotify import (
     play_music_on_spotify,
@@ -58,27 +65,70 @@ class BMOAgent:
             print(f"❌ ERRO: Falha ao inicializar o BMOAgent. {e}")
             traceback.print_exc()
 
+    def _create_llm(self, temperature: float):
+        """
+        Create an LLM instance based on configuration mode.
+
+        Args:
+            temperature: Temperature setting for the LLM
+
+        Returns:
+            LLM instance (ChatGroq or ChatOllama)
+        """
+        llm_config = self.config.config.llm
+        mode = llm_config.mode.lower()
+
+        # Try local first if hybrid mode
+        if mode in ["local", "hybrid"]:
+            try:
+                return self._create_local_llm(temperature)
+            except Exception as e:
+                if mode == "local":
+                    raise RuntimeError(f"Failed to initialize local LLM: {e}")
+                print(f"⚠️  Local LLM failed, falling back to cloud: {e}")
+
+        # Cloud mode or hybrid fallback
+        return self._create_cloud_llm(temperature)
+
+    def _create_local_llm(self, temperature: float):
+        """Create local LLM (Ollama)."""
+        if not OLLAMA_AVAILABLE:
+            raise ImportError("langchain-ollama not installed. Run: pip install langchain-ollama")
+
+        llm_config = self.config.config.llm.local
+        print(f"   🖥️  Usando LLM local: {llm_config.model} (Ollama)")
+
+        return ChatOllama(
+            model=llm_config.model,
+            base_url=llm_config.base_url,
+            temperature=temperature,
+            timeout=llm_config.timeout
+        )
+
+    def _create_cloud_llm(self, temperature: float):
+        """Create cloud LLM (Groq)."""
+        groq_api_key = self.config.get_api_key("groq")
+        if not groq_api_key:
+            raise ValueError("GROQ_API_KEY not found in environment")
+
+        llm_config = self.config.config.llm.cloud
+        print(f"   ☁️  Usando LLM cloud: {llm_config.model_name} (Groq)")
+
+        return ChatGroq(
+            temperature=temperature,
+            model_name=llm_config.model_name,
+            groq_api_key=groq_api_key
+        )
+
     def _build_agent(self):
         """Build the agent with all components."""
         # --- LLM Configuration ---
         llm_config = self.config.config.llm
-        groq_api_key = self.config.get_api_key("groq")
-
-        if not groq_api_key:
-            raise ValueError("GROQ_API_KEY not found in environment")
 
         # Create LLMs with different temperatures for different purposes
-        router_llm = ChatGroq(
-            temperature=llm_config.temperatures.router,
-            model_name=llm_config.model_name,
-            groq_api_key=groq_api_key
-        )
-
-        agent_llm = ChatGroq(
-            temperature=llm_config.temperatures.agent,
-            model_name=llm_config.model_name,
-            groq_api_key=groq_api_key
-        )
+        print(f"🧠 Inicializando LLM em modo '{llm_config.mode}'...")
+        router_llm = self._create_llm(llm_config.temperatures.router)
+        agent_llm = self._create_llm(llm_config.temperatures.agent)
 
         # --- Conversation Chain ---
         conv_prompt = ChatPromptTemplate.from_messages([
