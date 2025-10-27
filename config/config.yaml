@@ -9,8 +9,19 @@ project:
 
 # LLM Configuration
 llm:
-  provider: "groq"
-  model_name: "llama-3.1-8b-instant"
+  mode: "cloud"  # Options: cloud, local, hybrid (tries local, falls back to cloud)
+
+  # Cloud provider configuration (Groq)
+  cloud:
+    provider: "groq"
+    model_name: "llama-3.1-8b-instant"
+
+  # Local provider configuration (Ollama)
+  local:
+    provider: "ollama"  # Options: ollama, llamacpp
+    model: "llama3.1:8b"  # Model name in Ollama
+    base_url: "http://localhost:11434"
+    timeout: 120  # Seconds
 
   # Temperature settings for different use cases
   temperatures:
@@ -26,7 +37,7 @@ llm:
 
 # Text-to-Speech Configuration
 tts:
-  engine: "google"  # Options: google, coqui, elevenlabs
+  engine: "google"  # Options: google, coqui, piper, elevenlabs
 
   google:
     voice_name: "pt-BR-Chirp3-HD-Erinome"
@@ -39,14 +50,33 @@ tts:
     language: "pt"
     split_sentences: true
 
+  piper:
+    voice: "pt_BR-faber-medium"  # Options: pt_BR-faber-medium, pt_BR-edresson-low
+    quality: "medium"  # Options: low, medium, high
+    speaker: null  # For multi-speaker models
+    length_scale: 1.0  # Speed (1.0=normal, <1=faster, >1=slower)
+
   elevenlabs:
     voice_id: ""  # Configure if using ElevenLabs
 
 # Speech-to-Text Configuration
 stt:
-  provider: "groq"
-  model: "whisper-large-v3"
-  language: "pt"
+  mode: "cloud"  # Options: cloud, local, hybrid
+
+  # Cloud provider (Groq Whisper API)
+  cloud:
+    provider: "groq"
+    model: "whisper-large-v3"
+    language: "pt"
+
+  # Local provider (faster-whisper)
+  local:
+    provider: "faster-whisper"  # Options: faster-whisper, whisper
+    model: "small"  # Options: tiny, base, small, medium, large-v3
+    device: "cpu"  # Options: cpu, cuda
+    compute_type: "int8"  # Options: int8, float16, float32
+    language: "pt"
+    beam_size: 5  # Decoding beam size (higher=better quality, slower)
 
 # Wake Word Detection
 wake_word:
@@ -68,7 +98,10 @@ recording:
   channels: 1
   chunk_size: 1280
   format: "int16"
-  input_device_index: null  # null = default, or specify device index
+
+  # Audio device selection (use list_audio_devices.py to find indices)
+  input_device_index: null   # null = default input, or specify device index (e.g., 0, 1, 2)
+  output_device_index: null  # null = default output, or specify device index
 
   # Buffer management
   buffer_clear_duration_ms: 500
