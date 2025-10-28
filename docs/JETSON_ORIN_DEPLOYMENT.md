@@ -201,7 +201,7 @@ SPOTIPY_CLIENT_ID=xxxxx
 SPOTIPY_CLIENT_SECRET=xxxxx
 
 # Google Cloud (se usar Google TTS)
-# Arquivo separado: google_adc_credentials.json
+# Arquivo separado: credentials/google_adc_credentials.json
 ```
 
 ---
