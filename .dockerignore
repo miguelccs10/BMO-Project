@@ -1,0 +1,72 @@
+# .dockerignore
+# Arquivos a serem excluídos do contexto de build do Docker
+
+# Ambiente virtual Python
+venv/
+env/
+ENV/
+.venv/
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Credenciais e secrets (não devem estar na imagem)
+.env
+credentials/
+*.json
+.cache
+token.json
+
+# Arquivos temporários
+temp_question.wav
+response.mp3
+response.wav
+temp/
+*.mp3
+*.wav
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Documentação (não necessária na imagem)
+docs/
+tutorials/CLAUDE.md
+tutorials/README_JETSON.md
+*.md
+!README.md
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Modelos grandes (serão baixados pelo script)
+# custom_models/ é incluído, mas wake-words serão baixados no build
+
+# Instaladores
+*.sh
+!docker-entrypoint.sh
+
+# Outros
+BMO_EXPLORATION_REPORT.md
+training_samples/
