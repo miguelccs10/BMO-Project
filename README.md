@@ -109,11 +109,11 @@ Você precisará de três conjuntos de credenciais do [Google Cloud Console](htt
     *   Instale a [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) no seu computador.
     *   Autentique-se executando no seu terminal: `gcloud auth application-default login`.
     *   Vincule o projeto: `gcloud auth application-default set-quota-project SEU_PROJECT_ID`.
-    *   **Importante:** Copie o arquivo `application_default_credentials.json` gerado para a raiz do seu projeto e renomeie-o para `google_adc_credentials.json`.
+    *   **Importante:** Copie o arquivo `application_default_credentials.json` gerado para a pasta `credentials/` do seu projeto e renomeie-o para `google_adc_credentials.json`.
 4.  **Crie a Credencial OAuth (para Calendar):**
     *   Em "APIs & Services" -> "Credentials", clique em "+ CREATE CREDENTIALS" -> "OAuth client ID".
     *   Selecione "Desktop app".
-    *   Após criar, baixe o arquivo JSON. Renomeie-o para `credentials.json` e coloque na raiz do seu projeto.
+    *   Após criar, baixe o arquivo JSON. Renomeie-o para `credentials.json` e coloque na pasta `credentials/` do seu projeto.
 5.  **Configure a Custom Search API:**
     *   Vá para a [Máquina de Pesquisa Programável](https://programmablesearchengine.google.com/).
     *   Crie uma nova máquina de pesquisa, ative a opção "Pesquisar em toda a Web".
@@ -196,5 +196,5 @@ python bmo.py
 ```
 
 **Primeira Execução (Autenticação):**
-Na primeira vez que você usar as ferramentas do Spotify e do Google Calendar, o programa irá pausar e pedir para você seguir um fluxo de autenticação no navegador. Siga as instruções no terminal para autorizar o acesso. Arquivos de token (`token.json`, `.cache`) serão criados para automatizar as futuras execuções.
+Na primeira vez que você usar as ferramentas do Spotify e do Google Calendar, o programa irá pausar e pedir para você seguir um fluxo de autenticação no navegador. Siga as instruções no terminal para autorizar o acesso. Arquivos de token (`credentials/token.json` para Google Calendar, `.cache` para Spotify) serão criados automaticamente para futuras execuções.
 
