@@ -140,14 +140,14 @@ spotify:
 
 # Google Calendar Integration
 google_calendar:
-  credentials_file: "credentials.json"
-  token_file: "token.json"
+  credentials_file: "credentials/credentials.json"
+  token_file: "credentials/token.json"
   scopes:
     - "https://www.googleapis.com/auth/calendar.readonly"
 
 # Google Cloud Configuration
 google_cloud:
-  adc_credentials_file: "google_adc_credentials.json"
+  adc_credentials_file: "credentials/google_adc_credentials.json"
 
 # Flask Server Configuration
 server:

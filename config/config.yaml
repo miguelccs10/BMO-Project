@@ -9,7 +9,7 @@ project:
 
 # LLM Configuration
 llm:
-  mode: "cloud"  # Options: cloud, local, hybrid (tries local, falls back to cloud)
+  mode: "local"  # Options: cloud, local, hybrid (tries local, falls back to cloud)
 
   # Cloud provider configuration (Groq)
   cloud:
@@ -37,7 +37,7 @@ llm:
 
 # Text-to-Speech Configuration
 tts:
-  engine: "google"  # Options: google, coqui, piper, elevenlabs
+  engine: "piper"  # Options: google, coqui, piper, elevenlabs
 
   google:
     voice_name: "pt-BR-Chirp3-HD-Erinome"
@@ -51,17 +51,19 @@ tts:
     split_sentences: true
 
   piper:
-    voice: "pt_BR-faber-medium"  # Options: pt_BR-faber-medium, pt_BR-edresson-low
+    voice: "/home/miguel/.local/share/piper_tts/pt_BR-faber-medium.onnx"  # Vozes disponíveis:
+    # - pt_BR-faber-medium.onnx (voz masculina mais neutra)
+    # - pt_BR-edresson-low.onnx (voz masculina mais jovem, pode soar mais empolgada)
     quality: "medium"  # Options: low, medium, high
     speaker: null  # For multi-speaker models
-    length_scale: 1.0  # Speed (1.0=normal, <1=faster, >1=slower)
+    length_scale: 0.85  # Speed (1.0=normal, <1=faster, >1=slower) - 0.85 = 15% mais rápido e empolgado
 
   elevenlabs:
     voice_id: ""  # Configure if using ElevenLabs
 
 # Speech-to-Text Configuration
 stt:
-  mode: "cloud"  # Options: cloud, local, hybrid
+  mode: "local"  # Options: cloud, local, hybrid
 
   # Cloud provider (Groq Whisper API)
   cloud:
@@ -72,7 +74,7 @@ stt:
   # Local provider (faster-whisper)
   local:
     provider: "faster-whisper"  # Options: faster-whisper, whisper
-    model: "small"  # Options: tiny, base, small, medium, large-v3
+    model: "medium"  # Options: tiny, base, small, medium, large-v3 (medium = melhor equilíbrio)
     device: "cpu"  # Options: cpu, cuda
     compute_type: "int8"  # Options: int8, float16, float32
     language: "pt"
@@ -109,20 +111,20 @@ recording:
   # Voice Activity Detection (VAD)
   vad:
     enabled: true
-    threshold: 0.5  # Speech probability threshold (0.0 - 1.0)
-    min_speech_duration_ms: 250  # Minimum speech duration to start recording
-    min_silence_duration_ms: 700  # Silence duration to stop recording
+    threshold: 0.4  # Speech probability threshold (0.0 - 1.0) - Mais sensível
+    min_speech_duration_ms: 200  # Minimum speech duration to start recording
+    min_silence_duration_ms: 900  # Silence duration to stop recording - Espera mais para não cortar
     max_recording_seconds: 30  # Maximum recording duration (safety limit)
-    speech_pad_ms: 300  # Padding before speech starts
+    speech_pad_ms: 400  # Padding before speech starts - Mais contexto no início
 
 # Tools Configuration (Enable/Disable features)
 tools:
   spotify:
-    enabled: true  # Set to false to disable Spotify integration
+    enabled: false  # Set to false to disable Spotify integration
   google_calendar:
-    enabled: true  # Set to false to disable Google Calendar
+    enabled: false  # Set to false to disable Google Calendar
   google_search:
-    enabled: true  # Set to false to disable Google Search
+    enabled: false  # Set to false to disable Google Search
 
 # Spotify Integration
 spotify:
@@ -131,14 +133,14 @@ spotify:
 
 # Google Calendar Integration
 google_calendar:
-  credentials_file: "credentials.json"
-  token_file: "token.json"
+  credentials_file: "credentials/credentials.json"
+  token_file: "credentials/token.json"
   scopes:
     - "https://www.googleapis.com/auth/calendar.readonly"
 
 # Google Cloud Configuration
 google_cloud:
-  adc_credentials_file: "google_adc_credentials.json"
+  adc_credentials_file: "credentials/google_adc_credentials.json"
 
 # Flask Server Configuration
 server:

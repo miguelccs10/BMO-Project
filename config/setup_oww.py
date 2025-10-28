@@ -12,7 +12,9 @@ print("🔧 Preparando ambiente para OpenWakeWord...")
 # que está rodando este script (que será o do venv).
 # sys.prefix aponta para a raiz do ambiente virtual ativo (ex: C:\...\BMO-Project\venv)
 VENV_PATH = sys.prefix
-TARGET_DIR = os.path.join(VENV_PATH, "Lib", "site-packages", "openwakeword", "resources", "models")
+# Platform-aware: Windows uses "Lib", Linux/macOS use "lib"
+LIB_DIR = "Lib" if sys.platform == "win32" else "lib"
+TARGET_DIR = os.path.join(VENV_PATH, LIB_DIR, "site-packages", "openwakeword", "resources", "models")
 
 # Dicionário de modelos essenciais e seus URLs
 MODELS_TO_DOWNLOAD = {

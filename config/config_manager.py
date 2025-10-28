@@ -438,6 +438,68 @@ class ConfigManager:
             return False
         return tool_config.enabled
 
+    def get_llm(self, temperature: float, purpose: str = "general"):
+        """
+        Create and return an LLM instance based on configuration mode.
+
+        Args:
+            temperature: Temperature setting for the LLM
+            purpose: Purpose of the LLM (for logging) - 'router', 'agent', 'conversation'
+
+        Returns:
+            LLM instance (ChatGroq or ChatOllama)
+        """
+        from langchain_groq import ChatGroq
+
+        llm_config = self.config.llm
+        mode = llm_config.mode.lower()
+
+        # Try local first if hybrid mode
+        if mode in ["local", "hybrid"]:
+            try:
+                return self._create_local_llm(temperature, purpose)
+            except Exception as e:
+                if mode == "local":
+                    raise RuntimeError(f"Failed to initialize local LLM: {e}")
+                print(f"⚠️  Local LLM failed, falling back to cloud: {e}")
+
+        # Cloud mode or hybrid fallback
+        return self._create_cloud_llm(temperature, purpose)
+
+    def _create_local_llm(self, temperature: float, purpose: str):
+        """Create local LLM (Ollama)."""
+        try:
+            from langchain_ollama import ChatOllama
+        except ImportError:
+            raise ImportError("langchain-ollama not installed. Run: pip install langchain-ollama")
+
+        llm_config = self.config.llm.local
+        print(f"   🖥️  Usando LLM local: {llm_config.model} (Ollama) para {purpose}")
+
+        return ChatOllama(
+            model=llm_config.model,
+            base_url=llm_config.base_url,
+            temperature=temperature,
+            timeout=llm_config.timeout
+        )
+
+    def _create_cloud_llm(self, temperature: float, purpose: str):
+        """Create cloud LLM (Groq)."""
+        from langchain_groq import ChatGroq
+
+        groq_api_key = self.get_api_key("groq")
+        if not groq_api_key:
+            raise ValueError("GROQ_API_KEY not found in environment")
+
+        llm_config = self.config.llm.cloud
+        print(f"   ☁️  Usando LLM cloud: {llm_config.model_name} (Groq) para {purpose}")
+
+        return ChatGroq(
+            temperature=temperature,
+            model_name=llm_config.model_name,
+            groq_api_key=groq_api_key
+        )
+
 
 # Singleton instance
 _config_manager: Optional[ConfigManager] = None
