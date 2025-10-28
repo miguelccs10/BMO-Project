@@ -6,14 +6,23 @@ import traceback
 from spotipy.oauth2 import SpotifyOAuth
 from langchain.tools import tool
 
-# --- Configuração da Autenticação ---
-try:
-    scope = "user-modify-playback-state,user-read-playback-state,user-read-currently-playing"
-    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
-    print("✅ Conexão com o Spotify estabelecida.")
-except Exception as e:
-    print(f"❌ ERRO: Não foi possível conectar ao Spotify. Verifique as credenciais. Erro: {e}")
-    sp = None
+# --- Configuração da Autenticação (Lazy Loading) ---
+_sp = None
+_spotify_init_attempted = False
+
+def get_spotify_client():
+    """Get or initialize the Spotify client."""
+    global _sp, _spotify_init_attempted
+    if not _spotify_init_attempted:
+        _spotify_init_attempted = True
+        try:
+            scope = "user-modify-playback-state,user-read-playback-state,user-read-currently-playing"
+            _sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
+            print("✅ Conexão com o Spotify estabelecida.")
+        except Exception as e:
+            print(f"❌ ERRO: Não foi possível conectar ao Spotify. Verifique as credenciais. Erro: {e}")
+            _sp = None
+    return _sp
 
 # --- Função Auxiliar ---
 def get_active_device_id():
@@ -21,6 +30,7 @@ def get_active_device_id():
     Encontra e retorna o ID do primeiro dispositivo Spotify ativo ou disponível.
     É uma função auxiliar, não uma ferramenta para o agente.
     """
+    sp = get_spotify_client()
     if not sp: return None
     
     try:
@@ -49,6 +59,7 @@ def play_music_on_spotify(song_name: str, artist_name: str = None) -> str:
     Busca por uma música e a toca no dispositivo Spotify mais relevante (ativo ou primeiro da lista).
     A busca é mais precisa se o nome do artista for fornecido.
     """
+    sp = get_spotify_client()
     if not sp: return "Não consigo me conectar ao Spotify agora."
 
     device_id = get_active_device_id()
@@ -80,6 +91,7 @@ def control_spotify_playback(action: str) -> str:
     """
     Controla a reprodução do Spotify. As ações válidas são 'pause', 'resume' (ou 'play'), 'next' e 'previous'.
     """
+    sp = get_spotify_client()
     if not sp: return "Não consigo me conectar ao Spotify agora."
 
     device_id = get_active_device_id()
@@ -116,6 +128,7 @@ def get_current_spotify_song() -> str:
     """
     Verifica e retorna a música que está tocando agora no Spotify.
     """
+    sp = get_spotify_client()
     if not sp: return "Não consigo me conectar ao Spotify agora."
     
     try:
