@@ -187,18 +187,31 @@ echo ""
 # 12. Configurar arquivos
 print_info "Configurando arquivos..."
 
-# Copiar config.yaml se não existir
+# Criar diretório de credenciais
+if [ ! -d "credentials" ]; then
+    mkdir -p credentials
+    print_status "Diretório credentials/ criado"
+else
+    print_warning "Diretório credentials/ já existe"
+fi
+
+# Copiar config.yaml se não existir - usar versão otimizada do Jetson
 if [ ! -f "config/config.yaml" ]; then
-    cp config.yaml.example config/config.yaml
-
-    # Atualizar config.yaml para modo local com GPU
-    sed -i 's/mode: "cloud"/mode: "local"/' config/config.yaml
-    sed -i "s/model: \"llama3.1:8b\"/model: \"$MODEL_NAME\"/" config/config.yaml
-    sed -i 's/device: "cpu"/device: "cuda"/' config/config.yaml
-    sed -i 's/compute_type: "int8"/compute_type: "float16"/' config/config.yaml
-    sed -i 's/engine: "google"/engine: "coqui"/' config/config.yaml
-
-    print_status "config.yaml criado (modo local + GPU)"
+    if [ -f "config/config.jetson.yaml" ]; then
+        cp config/config.jetson.yaml config/config.yaml
+        # Atualizar modelo escolhido
+        sed -i "s/model: \"llama3.1:8b\"/model: \"$MODEL_NAME\"/" config/config.yaml
+        print_status "config.yaml criado (otimizado para Jetson + GPU)"
+    else
+        cp config.yaml.example config/config.yaml
+        # Atualizar config.yaml para modo local com GPU
+        sed -i 's/mode: "cloud"/mode: "local"/' config/config.yaml
+        sed -i "s/model: \"llama3.1:8b\"/model: \"$MODEL_NAME\"/" config/config.yaml
+        sed -i 's/device: "cpu"/device: "cuda"/' config/config.yaml
+        sed -i 's/compute_type: "int8"/compute_type: "float16"/' config/config.yaml
+        sed -i 's/engine: "google"/engine: "coqui"/' config/config.yaml
+        print_status "config.yaml criado (modo local + GPU)"
+    fi
 else
     print_warning "config.yaml já existe, não sobrescrevendo"
 fi
@@ -264,19 +277,25 @@ echo "  • Wake Word: OpenWakeWord"
 echo ""
 print_info "Próximos passos:"
 echo ""
-echo "1. ${YELLOW}Editar configurações${NC} (opcional):"
+echo "1. ${YELLOW}Configurar credenciais${NC} (se usar ferramentas cloud):"
+echo "   • Google Calendar/Search: credentials/credentials.json"
+echo "   • Google TTS: credentials/google_adc_credentials.json"
+echo "   • Spotify: Editar .env (SPOTIPY_CLIENT_ID/SECRET)"
+echo "   ${BLUE}Nota: Configuração atual usa modelos locais (não precisa credenciais)${NC}"
+echo ""
+echo "2. ${YELLOW}Editar configurações${NC} (opcional):"
 echo "   nano config/config.yaml"
 echo "   nano .env"
 echo ""
-echo "2. ${YELLOW}Gravar amostra de voz${NC} para XTTS (10 segundos):"
-echo "   arecord -f cd -d 10 bmo_voice_sample.wav"
+echo "3. ${YELLOW}Gravar amostra de voz${NC} para XTTS (10 segundos):"
+echo "   arecord -f cd -d 10 custom_models/bmo_voice_sample.wav"
 echo "   (Fale uma frase completa com tom natural)"
 echo ""
-echo "3. ${YELLOW}Iniciar BMO${NC}:"
+echo "4. ${YELLOW}Iniciar BMO${NC}:"
 echo "   source venv/bin/activate"
 echo "   python app/BMO.py"
 echo ""
-echo "4. ${YELLOW}Monitorar recursos${NC} (opcional):"
+echo "5. ${YELLOW}Monitorar recursos${NC} (opcional):"
 echo "   sudo pip3 install jetson-stats"
 echo "   sudo jtop"
 echo ""
