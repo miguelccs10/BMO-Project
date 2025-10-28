@@ -186,7 +186,7 @@ def conversation_cycle(audio_stream, audio_interface):
 
     # Generate and play response
     response_audio_path = audio_manager.text_to_speech_file(ai_response)
-    play_response(response_audio_path, audio_stream, pa)
+    play_response(response_audio_path, audio_stream, audio_interface)
 
     hardware.led_off()
     display.draw_face("neutral")
