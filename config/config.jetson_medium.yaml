@@ -1,0 +1,394 @@
+# BMO Configuration - Jetson Orin with MEDIUM-Weight Models + Wi-Fi Audio
+# Optimized for: NVIDIA Jetson Orin NX 16GB / AGX Orin 32GB
+# Audio Input: Phone via Wi-Fi streaming (WO Mic recommended)
+#
+# Copy to use: cp config/config.jetson_medium.yaml config/config.yaml
+
+# Project metadata
+project:
+  name: "BMO"
+  version: "4.2"
+  user_name: "Miguel"  # ← PERSONALIZE SEU NOME
+
+# ═══════════════════════════════════════════════════════════
+# LLM CONFIGURATION - MEDIUM MODEL (Best Balance)
+# ═══════════════════════════════════════════════════════════
+llm:
+  mode: "local"  # ← 100% local, usando GPU da Jetson
+
+  # Cloud provider (apenas como referência, não usado em modo local)
+  cloud:
+    provider: "groq"
+    model_name: "llama-3.1-8b-instant"
+
+  # Local provider - OLLAMA WITH GPU
+  local:
+    provider: "ollama"
+    model: "llama3.1:8b"  # ← PESO MÉDIO: 8B parâmetros (~6GB RAM)
+    # Este modelo oferece excelente equilíbrio entre:
+    # - Qualidade de resposta (muito boa)
+    # - Velocidade (~2-3s por resposta)
+    # - Uso de memória (aceitável para 16GB)
+    #
+    # Alternativas por hardware:
+    # - Orin Nano 8GB:  "llama3.2:3b" (mais rápido, menos RAM)
+    # - Orin NX 16GB:   "llama3.1:8b" (RECOMENDADO) ✓
+    # - AGX Orin 32GB:  "gemma2:9b" ou "llama3.1:8b" (máxima qualidade)
+    base_url: "http://localhost:11434"
+    timeout: 120
+
+  # Temperature settings
+  temperatures:
+    router: 0.0      # Decisões precisas de roteamento
+    agent: 0.7       # Respostas criativas com ferramentas
+    conversation: 0.7 # Conversação natural
+
+  # Agent execution settings
+  agent:
+    max_iterations: 5
+    verbose: true
+    handle_parsing_errors: true
+
+# ═══════════════════════════════════════════════════════════
+# TEXT-TO-SPEECH - COQUI XTTS (GPU-Accelerated)
+# ═══════════════════════════════════════════════════════════
+tts:
+  engine: "coqui"  # ← XTTS com GPU = excelente qualidade + voz clonada
+
+  google:
+    voice_name: "pt-BR-Chirp3-HD-Erinome"
+    language_code: "pt-BR"
+    audio_encoding: "MP3"
+
+  coqui:
+    model: "tts_models/multilingual/multi-dataset/xtts_v2"
+    voice_sample_path: "bmo_voice_sample.wav"  # ← GRAVE SUA VOZ!
+    # Para gravar: python custom_models/record_samples.py
+    language: "pt"
+    split_sentences: true
+    # Performance esperada na Jetson Orin:
+    # - Latência: ~300-500ms (com GPU)
+    # - Qualidade: Excelente (clonagem de voz)
+    # - Uso GPU: ~2.5GB VRAM
+
+  piper:
+    voice: "pt_BR-faber-medium"
+    quality: "medium"
+    speaker: null
+    length_scale: 1.0
+
+  elevenlabs:
+    voice_id: ""
+
+# ═══════════════════════════════════════════════════════════
+# SPEECH-TO-TEXT - MEDIUM MODEL (GPU-Accelerated)
+# ═══════════════════════════════════════════════════════════
+stt:
+  mode: "local"  # ← STT local usando GPU da Jetson
+
+  # Cloud provider (apenas referência)
+  cloud:
+    provider: "groq"
+    model: "whisper-large-v3"
+    language: "pt"
+
+  # Local provider - faster-whisper WITH GPU
+  local:
+    provider: "faster-whisper"
+    model: "medium"  # ← PESO MÉDIO: Melhor qualidade que small
+    # Comparação de modelos para português:
+    # ┌─────────┬────────────┬─────────────┬──────────────┐
+    # │ Modelo  │ Acurácia   │ Latência    │ VRAM (GPU)   │
+    # ├─────────┼────────────┼─────────────┼──────────────┤
+    # │ tiny    │ ~70%       │ ~100ms      │ ~1GB         │
+    # │ base    │ ~75%       │ ~150ms      │ ~1GB         │
+    # │ small   │ ~85%       │ ~300ms      │ ~2GB         │
+    # │ medium  │ ~92%  ✓    │ ~500ms      │ ~5GB         │ ← RECOMENDADO
+    # │ large-v3│ ~95%       │ ~1000ms     │ ~10GB        │
+    # └─────────┴────────────┴─────────────┴──────────────┘
+    #
+    # O modelo "medium" oferece:
+    # - Transcrição muito precisa (92% acurácia em PT-BR)
+    # - Latência aceitável (~500ms)
+    # - Uso de VRAM moderado (~5GB)
+    # - Ideal para Jetson Orin NX 16GB
+    device: "cuda"  # ← IMPORTANTE: Usar GPU!
+    compute_type: "float16"  # float16 para GPU (melhor performance)
+    language: "pt"
+    beam_size: 5  # Tamanho do beam (5 = bom equilíbrio)
+
+# ═══════════════════════════════════════════════════════════
+# WAKE WORD DETECTION - LOCAL (OpenWakeWord + ONNX)
+# ═══════════════════════════════════════════════════════════
+wake_word:
+  model_path: "custom_models/wake_word/Talos.onnx"
+  threshold: 0.5
+  inference_framework: "onnx"
+
+  audio:
+    sample_rate: 16000
+    chunk_size: 1280  # 80ms at 16kHz
+    channels: 1
+    format: "int16"
+
+# ═══════════════════════════════════════════════════════════
+# AUDIO RECORDING - WI-FI STREAMING FROM PHONE
+# ═══════════════════════════════════════════════════════════
+recording:
+  duration_seconds: 5  # Fallback se VAD desabilitar
+  sample_rate: 16000
+  channels: 1
+  chunk_size: 1280
+  format: "int16"
+
+  # Audio device selection
+  # IMPORTANTE: Use python tutorials/detect_wifi_stream.py para descobrir
+  input_device_index: null   # null = auto-detect, ou especifique (ex: 4, 6)
+  output_device_index: null  # null = padrão, ou especifique
+
+  buffer_clear_duration_ms: 500
+
+  # Wi-Fi Audio Streaming Configuration (NEW!)
+  wifi_stream:
+    enabled: true  # ← Habilita detecção automática de stream Wi-Fi
+    auto_detect: true  # Detecta automaticamente WO Mic, SoundWire, etc.
+    auto_start: true   # Tenta iniciar WO Mic automaticamente
+    fallback_to_local: true  # Se stream não disponível, usa mic local
+
+    # Preferências de dispositivo (ordem de prioridade)
+    preferred_devices:
+      - "wo_mic"
+      - "WO Mic"
+      - "soundwire"
+      - "SoundWire"
+      - "phone"
+      - "stream"
+
+    # WO Mic specific settings
+    womic:
+      server_ip: null  # null = auto-detect (via gateway), ou especifique IP do celular
+      port: 48000      # Porta padrão do WO Mic (Wi-Fi mode)
+
+  # Voice Activity Detection (VAD) - RECOMENDADO
+  vad:
+    enabled: true  # ← Detecta automaticamente fim da fala
+    threshold: 0.45  # Threshold ajustado para Wi-Fi streaming (pode ter mais ruído)
+    min_speech_duration_ms: 300  # Mínimo de fala para começar gravação
+    min_silence_duration_ms: 800  # Silêncio para parar gravação
+    max_recording_seconds: 30     # Limite de segurança
+    speech_pad_ms: 400            # Padding antes da fala começar
+
+# ═══════════════════════════════════════════════════════════
+# TOOLS CONFIGURATION
+# ═══════════════════════════════════════════════════════════
+tools:
+  spotify:
+    enabled: true
+  google_calendar:
+    enabled: true
+  google_search:
+    enabled: true
+
+# Spotify Integration
+spotify:
+  scope: "user-modify-playback-state,user-read-playback-state,user-read-currently-playing"
+  redirect_uri: "http://127.0.0.1:9090"
+
+# Google Calendar Integration
+google_calendar:
+  credentials_file: "credentials/credentials.json"
+  token_file: "credentials/token.json"
+  scopes:
+    - "https://www.googleapis.com/auth/calendar.readonly"
+
+# Google Cloud Configuration
+google_cloud:
+  adc_credentials_file: "credentials/google_adc_credentials.json"
+
+# Flask Server Configuration
+server:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
+
+# LangChain Settings
+langchain:
+  tracing_v2: false
+  api_key: ""
+  endpoint: "https://api.smith.langchain.com"
+  project: "bmo_project"
+
+# Paths Configuration
+paths:
+  base_dir: "."
+  temp_audio: "temp_question.wav"
+  response_audio_mp3: "response.mp3"
+  response_audio_wav: "response.wav"
+  web_folder: "web"
+  custom_models: "custom_models"
+
+# Hardware Settings (Jetson)
+hardware:
+  enabled: false  # ← true se tiver LEDs/display conectados
+  gpio_led_pin: null  # Ex: 18 para GPIO18
+  display:
+    enabled: false  # ← true se tiver display OLED
+    type: null  # "ssd1306" ou "st7789"
+    width: 128
+    height: 64
+
+# ═══════════════════════════════════════════════════════════
+# NOTAS DE CONFIGURAÇÃO - JETSON ORIN MEDIUM
+# ═══════════════════════════════════════════════════════════
+#
+# 📋 RESUMO DA CONFIGURAÇÃO:
+# ─────────────────────────────────────────────────────────
+# LLM:    llama3.1:8b     (~6GB RAM, ~2-3s latência)
+# STT:    medium          (~5GB VRAM, ~500ms latência)
+# TTS:    Coqui XTTS      (~2.5GB VRAM, ~400ms latência)
+# Áudio:  Wi-Fi Stream    (via celular, latência ~20-50ms)
+# Total:  ~13-14GB RAM    + 7-8GB VRAM em uso simultâneo
+#
+# ✅ IDEAL PARA: Jetson Orin NX 16GB e AGX Orin 32GB
+# ⚠️  NÃO RECOMENDADO PARA: Jetson Orin Nano 8GB
+#    (use config.jetson.yaml com modelos small/tiny)
+#
+# ═══════════════════════════════════════════════════════════
+# 🚀 SETUP INICIAL:
+# ═══════════════════════════════════════════════════════════
+#
+# 1. COPIAR ESTA CONFIGURAÇÃO:
+#    cp config/config.jetson_medium.yaml config/config.yaml
+#
+# 2. INSTALAR WO MIC (Wi-Fi Audio):
+#    bash requirements/setup_wifi_audio.sh
+#
+# 3. BAIXAR MODELOS OLLAMA:
+#    ollama pull llama3.1:8b
+#
+# 4. ATIVAR MODO PERFORMANCE:
+#    sudo nvpmodel -m 0          # MAXN mode
+#    sudo jetson_clocks          # Max clocks
+#
+# 5. CONFIGURAR ÁUDIO WI-FI:
+#    # No celular:
+#    - Ativar Hotspot Wi-Fi
+#    - Instalar WO Mic app (Android/iOS)
+#    - Iniciar transmissão via Wi-Fi
+#
+#    # Na Jetson:
+#    - Conectar ao hotspot do celular
+#    - Detectar dispositivo: python tutorials/detect_wifi_stream.py
+#    - O BMO vai detectar automaticamente!
+#
+# 6. TESTAR SETUP:
+#    python app/BMO.py
+#
+# ═══════════════════════════════════════════════════════════
+# 🔧 PERFORMANCE E OTIMIZAÇÃO:
+# ═══════════════════════════════════════════════════════════
+#
+# LATÊNCIAS ESPERADAS (end-to-end):
+# ─────────────────────────────────
+# Wake Word:        ~80ms
+# VAD:              ~1ms
+# Audio Stream:     ~20-50ms (Wi-Fi)
+# STT (medium):     ~500ms (GPU)
+# LLM (8B):         ~2-3s (GPU)
+# TTS (XTTS):       ~400ms (GPU)
+# ─────────────────────────────────
+# TOTAL:            ~3-4 segundos por interação
+#
+# USO DE RECURSOS:
+# ─────────────────────────────────
+# RAM:              ~13-14GB (pico)
+# VRAM:             ~7-8GB (pico)
+# CPU:              ~30-40% (moderado)
+# GPU:              ~60-80% (alto durante inferência)
+# Potência:         ~15-20W (modo MAXN)
+# Temperatura:      ~55-65°C (com cooler ativo)
+#
+# SWAP RECOMENDADO:
+# ─────────────────────────────────
+# Para evitar OOM (Out of Memory):
+# sudo fallocate -l 8G /swapfile
+# sudo chmod 600 /swapfile
+# sudo mkswap /swapfile
+# sudo swapon /swapfile
+#
+# MONITORAMENTO:
+# ─────────────────────────────────
+# sudo jtop              # Monitor completo (GPU, RAM, temp)
+# nvidia-smi             # Status da GPU
+# htop                   # Monitor de processos
+#
+# ═══════════════════════════════════════════════════════════
+# 📱 WI-FI AUDIO STREAMING:
+# ═══════════════════════════════════════════════════════════
+#
+# VANTAGENS:
+# ✅ Qualidade superior ao Bluetooth (48kHz vs 8-16kHz)
+# ✅ Latência muito baixa em rede local (<50ms)
+# ✅ Mobilidade total (celular como microfone sem fio)
+# ✅ Internet compartilhada (tethering do celular)
+# ✅ Não requer hardware adicional
+#
+# REQUISITOS:
+# - Celular Android/iOS com app WO Mic ou SoundWire
+# - Jetson conectada ao hotspot do celular (ou mesma rede Wi-Fi)
+# - WO Mic client instalado na Jetson
+#
+# APPS RECOMENDADOS:
+# 1. WO Mic (RECOMENDADO):
+#    - Android: https://play.google.com/store/apps/details?id=com.wo.voice2
+#    - iOS: https://apps.apple.com/app/wo-mic/id1260978417
+#    - Gratuito, baixa latência, cliente Linux oficial
+#
+# 2. SoundWire:
+#    - Latência ainda menor (~10-30ms)
+#    - Versão paga para melhor qualidade
+#
+# TROUBLESHOOTING:
+# - Dispositivo não detectado: Verifique se app está transmitindo
+# - Latência alta: Use cabo USB-C em vez de Wi-Fi
+# - Áudio cortado: Ajuste vad.threshold e min_silence_duration_ms
+# - Stream cai: Ative wifi_stream.fallback_to_local
+#
+# ═══════════════════════════════════════════════════════════
+# 🎯 QUALIDADE DOS MODELOS MÉDIOS:
+# ═══════════════════════════════════════════════════════════
+#
+# COMPARAÇÃO COM OUTROS TAMANHOS:
+#
+# ┌──────────┬─────────────┬──────────────┬──────────────┐
+# │ Config   │ Qualidade   │ Velocidade   │ Hardware     │
+# ├──────────┼─────────────┼──────────────┼──────────────┤
+# │ SMALL    │ ⭐⭐⭐       │ ⚡⚡⚡⚡      │ 8GB+ RAM     │
+# │ MEDIUM ✓ │ ⭐⭐⭐⭐     │ ⚡⚡⚡        │ 16GB+ RAM    │
+# │ LARGE    │ ⭐⭐⭐⭐⭐   │ ⚡⚡          │ 32GB+ RAM    │
+# └──────────┴─────────────┴──────────────┴──────────────┘
+#
+# ESTA CONFIGURAÇÃO MEDIUM OFERECE:
+# ✅ Transcrição muito precisa (92% acurácia)
+# ✅ Respostas inteligentes e contextualizadas
+# ✅ Voz clonada de alta qualidade
+# ✅ Velocidade ainda aceitável (3-4s por interação)
+# ✅ Uso de recursos moderado para 16GB RAM
+#
+# IDEAL PARA:
+# - Aplicações onde qualidade é prioridade
+# - Conversas naturais e contextuais
+# - Uso de ferramentas complexas (Spotify, Calendar, Search)
+# - Demonstrações e apresentações
+#
+# ═══════════════════════════════════════════════════════════
+# 📚 DOCUMENTAÇÃO ADICIONAL:
+# ═══════════════════════════════════════════════════════════
+#
+# - docs/JETSON_ORIN_DEPLOYMENT.md    → Setup completo da Jetson
+# - docs/WIFI_AUDIO_SETUP.md          → Guia detalhado de áudio Wi-Fi
+# - docs/LOCAL_MODELS.md              → Operação 100% offline
+# - docs/AUDIO_DEVICES.md             → Troubleshooting de áudio
+# - docs/TTS_COMPARISON.md            → Comparação de engines TTS
+#
+# ═══════════════════════════════════════════════════════════

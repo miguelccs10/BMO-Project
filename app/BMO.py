@@ -62,6 +62,42 @@ bmo_agent = BMOAgent()
 BMO_SESSION_ID = f"bmo-session-{str(uuid.uuid4())}"
 print(f"✅ Sessão de memória iniciada com o ID: ...{BMO_SESSION_ID[-12:]}")
 
+# --- Wi-Fi Audio Stream Detection (if enabled) ---
+def detect_audio_input_device():
+    """
+    Detect and configure audio input device.
+    Tries Wi-Fi stream first (if enabled), then falls back to configured device.
+
+    Returns:
+        int or None: Device index to use
+    """
+    # Check if Wi-Fi streaming is enabled
+    recording_config = config.config.recording
+
+    if hasattr(recording_config, 'wifi_stream') and recording_config.wifi_stream.get('enabled', False):
+        print("\n📡 Wi-Fi Audio Streaming habilitado - tentando detectar dispositivo...")
+
+        # Try to detect Wi-Fi stream device
+        if audio_manager.wifi_stream_manager:
+            device_idx = audio_manager.wifi_stream_manager.detect_wifi_stream_device()
+
+            if device_idx is not None:
+                print(f"✅ Usando dispositivo Wi-Fi stream: [{device_idx}] {audio_manager.wifi_stream_manager.device_name}")
+                return device_idx
+            else:
+                print("⚠️  Dispositivo Wi-Fi stream não detectado.")
+
+                # Check fallback option
+                if recording_config.wifi_stream.get('fallback_to_local', True):
+                    print("   Usando fallback para dispositivo local/padrão.")
+                    return INPUT_DEVICE_INDEX
+                else:
+                    print("   ❌ Fallback desabilitado. Configure o stream Wi-Fi antes de iniciar.")
+                    sys.exit(1)
+
+    # Use configured device or default
+    return INPUT_DEVICE_INDEX
+
 
 def clear_audio_buffer(stream, clear_duration_ms: int = None):
     """Clear audio buffer to prevent echo/false triggers."""
@@ -209,10 +245,13 @@ def main():
     # Setup audio stream
     pa = pyaudio.PyAudio()
 
+    # Detect and configure audio input device (with Wi-Fi stream support)
+    actual_input_device = detect_audio_input_device()
+
     # Display audio device info
-    if INPUT_DEVICE_INDEX is not None:
-        input_info = pa.get_device_info_by_index(INPUT_DEVICE_INDEX)
-        print(f"🎤 Dispositivo de entrada: [{INPUT_DEVICE_INDEX}] {input_info['name']}")
+    if actual_input_device is not None:
+        input_info = pa.get_device_info_by_index(actual_input_device)
+        print(f"🎤 Dispositivo de entrada: [{actual_input_device}] {input_info['name']}")
     else:
         print(f"🎤 Dispositivo de entrada: [default]")
 
@@ -229,7 +268,7 @@ def main():
         format=pyaudio.paInt16,
         input=True,
         frames_per_buffer=CHUNK,
-        input_device_index=INPUT_DEVICE_INDEX
+        input_device_index=actual_input_device
     )
 
     print(f"\n✅ BMO está pronto! Escutando pela wake-word 'Ei, BMO'...")

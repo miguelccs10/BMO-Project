@@ -144,6 +144,22 @@ class VADConfig(BaseModel):
     speech_pad_ms: int = Field(ge=0, default=300)
 
 
+class WOMicConfig(BaseModel):
+    """WO Mic specific configuration."""
+    server_ip: Optional[str] = None
+    port: int = 48000
+
+
+class WiFiStreamConfig(BaseModel):
+    """Wi-Fi audio streaming configuration."""
+    enabled: bool = False
+    auto_detect: bool = True
+    auto_start: bool = True
+    fallback_to_local: bool = True
+    preferred_devices: List[str] = Field(default_factory=lambda: ["wo_mic", "WO Mic", "soundwire", "phone"])
+    womic: WOMicConfig = Field(default_factory=WOMicConfig)
+
+
 class RecordingConfig(BaseModel):
     """Audio recording configuration."""
     duration_seconds: int
@@ -155,6 +171,7 @@ class RecordingConfig(BaseModel):
     output_device_index: Optional[int] = None
     buffer_clear_duration_ms: int
     vad: VADConfig
+    wifi_stream: Optional[WiFiStreamConfig] = None
 
 
 class ToolEnabledConfig(BaseModel):

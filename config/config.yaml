@@ -9,7 +9,7 @@ project:
 
 # LLM Configuration
 llm:
-  mode: "local"  # Options: cloud, local, hybrid (tries local, falls back to cloud)
+  mode: "cloud"  # Options: cloud, local, hybrid (tries local, falls back to cloud)
 
   # Cloud provider configuration (Groq)
   cloud:
@@ -63,7 +63,7 @@ tts:
 
 # Speech-to-Text Configuration
 stt:
-  mode: "local"  # Options: cloud, local, hybrid
+  mode: "cloud"  # Options: cloud, local, hybrid
 
   # Cloud provider (Groq Whisper API)
   cloud:

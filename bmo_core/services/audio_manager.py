@@ -85,12 +85,39 @@ class AudioManager:
         self.tts_engine = self.config.config.tts.engine
         self.tts_model = None
         self.groq_client = None
+        self.wifi_stream_manager = None
+
+        # Initialize Wi-Fi audio stream if enabled
+        self._init_wifi_stream()
 
         # Initialize STT
         self._init_stt()
 
         # Initialize TTS
         self._init_tts()
+
+    def _init_wifi_stream(self):
+        """Initialize Wi-Fi audio streaming if configured."""
+        try:
+            # Check if Wi-Fi streaming is enabled in config
+            recording_config = self.config.config.recording
+
+            # Only initialize if explicitly enabled or device index suggests Wi-Fi stream
+            if hasattr(recording_config, 'wifi_stream') and recording_config.wifi_stream.get('enabled', False):
+                from bmo_core.services.wifi_audio_stream import WiFiAudioStreamManager
+
+                self.wifi_stream_manager = WiFiAudioStreamManager()
+                print("📡 Wi-Fi Audio Stream Manager inicializado.")
+
+                # Auto-detect if configured
+                if recording_config.wifi_stream.get('auto_detect', True):
+                    device_idx = self.wifi_stream_manager.detect_wifi_stream_device()
+                    if device_idx is not None:
+                        print(f"   ✅ Dispositivo Wi-Fi detectado: [{device_idx}]")
+
+        except Exception as e:
+            print(f"⚠️  Wi-Fi stream não configurado: {e}")
+            self.wifi_stream_manager = None
 
     def _init_stt(self):
         """Initialize Speech-to-Text client based on mode."""
