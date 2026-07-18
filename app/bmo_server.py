@@ -14,29 +14,21 @@ from flask_sock import Sock
 from pydub import AudioSegment
 from simple_websocket.errors import ConnectionClosed
 
-# --- Setup paths before imports ---
+# --- Setup paths before local imports ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
-# Load configuration early
+# Local imports
 from config.config_manager import get_config
-
-config = get_config()
-
-# Setup Google credentials
-credentials_path = config.BASE_DIR / config.config.google_cloud.adc_credentials_file
-if credentials_path.exists():
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(credentials_path)
-else:
-    print(f"⚠️  AVISO: Arquivo de credenciais ADC '{credentials_path}' não encontrado. APIs do Google podem falhar.")
-
-print(f"--- Running BMO Server v{config.BMO_VERSION} (Flask Dev Mode) ---")
-
-# --- Import BMO Modules ---
 from bmo_core.agent.agent_executor import BMOAgent
 from bmo_core.services.audio_manager import AudioManager
 from bmo_core.services.hardware_manager import HardwareManager
 from bmo_core.services.display_manager import DisplayManager
+
+# Load configuration
+config = get_config()
+
+print(f"--- Running BMO Server v{config.BMO_VERSION} (Flask Dev Mode) ---")
 
 # --- Initialize Flask ---
 app = Flask(__name__)

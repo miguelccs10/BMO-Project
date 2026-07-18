@@ -15,30 +15,22 @@ from openwakeword.model import Model
 from pydub import AudioSegment
 from pydub.playback import play
 
-# --- Setup paths and credentials before imports ---
+# --- Setup paths before local imports ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
-# Load configuration early
+# Local imports
 from config.config_manager import get_config
-
-config = get_config()
-
-# Setup Google credentials
-credentials_path = config.BASE_DIR / config.config.google_cloud.adc_credentials_file
-if credentials_path.exists():
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(credentials_path)
-else:
-    print(f"⚠️  AVISO: Arquivo de credenciais '{credentials_path}' não encontrado. APIs do Google podem falhar.")
-
-print("--- Iniciando Sistemas do BMO ---")
-
-# Import BMO modules
-print("✅ Carregando cérebro, serviços e ferramentas do BMO...")
 from bmo_core.agent.agent_executor import BMOAgent
 from bmo_core.services.audio_manager import AudioManager
 from bmo_core.services.hardware_manager import HardwareManager
 from bmo_core.services.display_manager import DisplayManager
+
+# Load configuration
+config = get_config()
+
+print("--- Iniciando Sistemas do BMO ---")
+print("✅ Carregando cérebro, serviços e ferramentas do BMO...")
 
 # --- Configuration from YAML ---
 WAKE_WORD_MODEL_PATH = config.get_wake_word_model_path()
@@ -62,41 +54,7 @@ bmo_agent = BMOAgent()
 BMO_SESSION_ID = f"bmo-session-{str(uuid.uuid4())}"
 print(f"✅ Sessão de memória iniciada com o ID: ...{BMO_SESSION_ID[-12:]}")
 
-# --- Wi-Fi Audio Stream Detection (if enabled) ---
-def detect_audio_input_device():
-    """
-    Detect and configure audio input device.
-    Tries Wi-Fi stream first (if enabled), then falls back to configured device.
 
-    Returns:
-        int or None: Device index to use
-    """
-    # Check if Wi-Fi streaming is enabled
-    recording_config = config.config.recording
-
-    if hasattr(recording_config, 'wifi_stream') and recording_config.wifi_stream.get('enabled', False):
-        print("\n📡 Wi-Fi Audio Streaming habilitado - tentando detectar dispositivo...")
-
-        # Try to detect Wi-Fi stream device
-        if audio_manager.wifi_stream_manager:
-            device_idx = audio_manager.wifi_stream_manager.detect_wifi_stream_device()
-
-            if device_idx is not None:
-                print(f"✅ Usando dispositivo Wi-Fi stream: [{device_idx}] {audio_manager.wifi_stream_manager.device_name}")
-                return device_idx
-            else:
-                print("⚠️  Dispositivo Wi-Fi stream não detectado.")
-
-                # Check fallback option
-                if recording_config.wifi_stream.get('fallback_to_local', True):
-                    print("   Usando fallback para dispositivo local/padrão.")
-                    return INPUT_DEVICE_INDEX
-                else:
-                    print("   ❌ Fallback desabilitado. Configure o stream Wi-Fi antes de iniciar.")
-                    sys.exit(1)
-
-    # Use configured device or default
-    return INPUT_DEVICE_INDEX
 
 
 def clear_audio_buffer(stream, clear_duration_ms: int = None):
@@ -245,8 +203,8 @@ def main():
     # Setup audio stream
     pa = pyaudio.PyAudio()
 
-    # Detect and configure audio input device (with Wi-Fi stream support)
-    actual_input_device = detect_audio_input_device()
+    # Configure audio input device
+    actual_input_device = INPUT_DEVICE_INDEX
 
     # Display audio device info
     if actual_input_device is not None:

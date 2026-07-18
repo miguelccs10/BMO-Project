@@ -17,9 +17,7 @@ from config.config_manager import get_config
 # Conditional imports based on TTS engine configuration
 config = get_config()
 
-if config.config.tts.engine == "google":
-    from google.cloud import texttospeech
-elif config.config.tts.engine == "coqui":
+if config.config.tts.engine == "coqui":
     import torch
     from TTS.api import TTS
     from TTS.tts.configs.xtts_config import XttsConfig
@@ -85,39 +83,12 @@ class AudioManager:
         self.tts_engine = self.config.config.tts.engine
         self.tts_model = None
         self.groq_client = None
-        self.wifi_stream_manager = None
-
-        # Initialize Wi-Fi audio stream if enabled
-        self._init_wifi_stream()
-
         # Initialize STT
         self._init_stt()
 
         # Initialize TTS
         self._init_tts()
 
-    def _init_wifi_stream(self):
-        """Initialize Wi-Fi audio streaming if configured."""
-        try:
-            # Check if Wi-Fi streaming is enabled in config
-            recording_config = self.config.config.recording
-
-            # Only initialize if explicitly enabled or device index suggests Wi-Fi stream
-            if hasattr(recording_config, 'wifi_stream') and recording_config.wifi_stream.get('enabled', False):
-                from bmo_core.services.wifi_audio_stream import WiFiAudioStreamManager
-
-                self.wifi_stream_manager = WiFiAudioStreamManager()
-                print("📡 Wi-Fi Audio Stream Manager inicializado.")
-
-                # Auto-detect if configured
-                if recording_config.wifi_stream.get('auto_detect', True):
-                    device_idx = self.wifi_stream_manager.detect_wifi_stream_device()
-                    if device_idx is not None:
-                        print(f"   ✅ Dispositivo Wi-Fi detectado: [{device_idx}]")
-
-        except Exception as e:
-            print(f"⚠️  Wi-Fi stream não configurado: {e}")
-            self.wifi_stream_manager = None
 
     def _init_stt(self):
         """Initialize Speech-to-Text client based on mode."""
@@ -147,9 +118,7 @@ class AudioManager:
         """Initialize Text-to-Speech engine based on configuration."""
         print(f"🔊 Usando motor de voz (TTS): '{self.tts_engine}'")
 
-        if self.tts_engine == "google":
-            self._init_google_tts()
-        elif self.tts_engine == "coqui":
+        if self.tts_engine == "coqui":
             self._init_coqui_tts()
         elif self.tts_engine == "piper":
             self._init_piper_tts()
@@ -159,14 +128,6 @@ class AudioManager:
             print(f"⚠️  Motor TTS desconhecido: '{self.tts_engine}'")
             self.tts_engine = None
 
-    def _init_google_tts(self):
-        """Initialize Google Cloud TTS client."""
-        try:
-            self.tts_model = texttospeech.TextToSpeechClient()
-            print("✅ Cliente Google Cloud TTS inicializado.")
-        except Exception as e:
-            print(f"❌ ERRO ao inicializar Google Cloud TTS: {e}")
-            self.tts_engine = None
 
     def _init_coqui_tts(self):
         """Initialize Coqui TTS model."""
@@ -508,64 +469,13 @@ class AudioManager:
 
         print(f"   Gerando áudio com o motor '{self.tts_engine}'...")
 
-        if self.tts_engine == "google":
-            return self._tts_google(text)
-        elif self.tts_engine == "coqui":
+        if self.tts_engine == "coqui":
             return self._tts_coqui(text)
         elif self.tts_engine == "piper":
             return self._tts_piper(text)
 
         return None
 
-    def _tts_google(self, text: str) -> Optional[str]:
-        """
-        Generate speech using Google Cloud TTS.
-
-        Args:
-            text: Text to convert
-
-        Returns:
-            Path to generated MP3 file
-        """
-        output_filename = str(self.config.get_path('response_audio_mp3'))
-
-        try:
-            google_config = self.config.config.tts.google
-
-            synthesis_input = texttospeech.SynthesisInput(text=text)
-            voice = texttospeech.VoiceSelectionParams(
-                language_code=google_config.language_code,
-                name=google_config.voice_name
-            )
-
-            # Map string encoding to enum
-            encoding_map = {
-                "MP3": texttospeech.AudioEncoding.MP3,
-                "LINEAR16": texttospeech.AudioEncoding.LINEAR16,
-                "OGG_OPUS": texttospeech.AudioEncoding.OGG_OPUS
-            }
-            audio_encoding = encoding_map.get(
-                google_config.audio_encoding,
-                texttospeech.AudioEncoding.MP3
-            )
-
-            audio_config = texttospeech.AudioConfig(audio_encoding=audio_encoding)
-
-            response = self.tts_model.synthesize_speech(
-                input=synthesis_input,
-                voice=voice,
-                audio_config=audio_config
-            )
-
-            with open(output_filename, "wb") as out:
-                out.write(response.audio_content)
-
-            return output_filename
-
-        except Exception as e:
-            print(f"❌ ERRO no motor Google TTS: {e}")
-            traceback.print_exc()
-            return None
 
     def _tts_coqui(self, text: str) -> Optional[str]:
         """
