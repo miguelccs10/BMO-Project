@@ -40,12 +40,20 @@ class LLMCloudConfig(BaseModel):
     model_name: str
 
 
+class AirLLMConfig(BaseModel):
+    """AirLLM specific configuration."""
+    hf_repo: str
+    compression: Optional[str] = None
+    max_length: int = 128
+
+
 class LLMLocalConfig(BaseModel):
     """Local LLM configuration."""
     provider: str = "ollama"
     model: str
     base_url: str = "http://localhost:11434"
     timeout: int = 120
+    airllm: Optional[AirLLMConfig] = None
 
 
 class LLMConfig(BaseModel):
@@ -55,13 +63,6 @@ class LLMConfig(BaseModel):
     local: LLMLocalConfig
     temperatures: LLMTemperatures
     agent: AgentConfig
-
-
-class GoogleTTSConfig(BaseModel):
-    """Google Cloud TTS configuration."""
-    voice_name: str
-    language_code: str
-    audio_encoding: str
 
 
 class CoquiTTSConfig(BaseModel):
@@ -88,7 +89,6 @@ class ElevenLabsTTSConfig(BaseModel):
 class TTSConfig(BaseModel):
     """Text-to-Speech configuration."""
     engine: str
-    google: GoogleTTSConfig
     coqui: CoquiTTSConfig
     piper: PiperTTSConfig
     elevenlabs: ElevenLabsTTSConfig
@@ -144,22 +144,6 @@ class VADConfig(BaseModel):
     speech_pad_ms: int = Field(ge=0, default=300)
 
 
-class WOMicConfig(BaseModel):
-    """WO Mic specific configuration."""
-    server_ip: Optional[str] = None
-    port: int = 48000
-
-
-class WiFiStreamConfig(BaseModel):
-    """Wi-Fi audio streaming configuration."""
-    enabled: bool = False
-    auto_detect: bool = True
-    auto_start: bool = True
-    fallback_to_local: bool = True
-    preferred_devices: List[str] = Field(default_factory=lambda: ["wo_mic", "WO Mic", "soundwire", "phone"])
-    womic: WOMicConfig = Field(default_factory=WOMicConfig)
-
-
 class RecordingConfig(BaseModel):
     """Audio recording configuration."""
     duration_seconds: int
@@ -171,7 +155,6 @@ class RecordingConfig(BaseModel):
     output_device_index: Optional[int] = None
     buffer_clear_duration_ms: int
     vad: VADConfig
-    wifi_stream: Optional[WiFiStreamConfig] = None
 
 
 class ToolEnabledConfig(BaseModel):
@@ -197,11 +180,6 @@ class GoogleCalendarConfig(BaseModel):
     credentials_file: str
     token_file: str
     scopes: List[str]
-
-
-class GoogleCloudConfig(BaseModel):
-    """Google Cloud configuration."""
-    adc_credentials_file: str
 
 
 class ServerConfig(BaseModel):
@@ -264,7 +242,6 @@ class BMOConfig(BaseModel):
     tools: ToolsConfig
     spotify: SpotifyConfig
     google_calendar: GoogleCalendarConfig
-    google_cloud: GoogleCloudConfig
     server: ServerConfig
     langchain: LangChainConfig
     paths: PathsConfig
@@ -342,12 +319,7 @@ class ConfigManager:
         os.environ["LANGCHAIN_ENDPOINT"] = self.config.langchain.endpoint
         os.environ["LANGCHAIN_PROJECT"] = self.config.langchain.project
 
-        # Set Google Application Credentials
-        credentials_path = self.base_dir / self.config.google_cloud.adc_credentials_file
-        if credentials_path.exists():
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(credentials_path)
-        else:
-            print(f"⚠️  Warning: Google ADC credentials not found at {credentials_path}")
+
 
     def get_api_key(self, service: str) -> Optional[str]:
         """
@@ -484,15 +456,31 @@ class ConfigManager:
         return self._create_cloud_llm(temperature, purpose)
 
     def _create_local_llm(self, temperature: float, purpose: str):
-        """Create local LLM (Ollama)."""
+        """Create local LLM (Ollama or AirLLM)."""
+        llm_config = self.config.llm.local
+        provider = llm_config.provider.lower()
+
+        if provider == "airllm":
+            try:
+                from bmo_core.agent.airllm_wrapper import AirLLMWrapper
+            except ImportError:
+                raise ImportError("Failed to import AirLLMWrapper. Check dependencies.")
+            
+            print(f"   🖥️  Usando LLM local: AirLLM ({llm_config.airllm.hf_repo}) para {purpose}")
+            return AirLLMWrapper(
+                hf_repo=llm_config.airllm.hf_repo,
+                compression=llm_config.airllm.compression,
+                max_length=llm_config.airllm.max_length,
+                max_new_tokens=150
+            )
+
+        # Fallback to Ollama
         try:
             from langchain_ollama import ChatOllama
         except ImportError:
             raise ImportError("langchain-ollama not installed. Run: pip install langchain-ollama")
 
-        llm_config = self.config.llm.local
         print(f"   🖥️  Usando LLM local: {llm_config.model} (Ollama) para {purpose}")
-
         return ChatOllama(
             model=llm_config.model,
             base_url=llm_config.base_url,

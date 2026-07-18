@@ -119,48 +119,48 @@ class BMOAgent:
 
         if not tools:
             print("   ⚠️  AVISO: Nenhuma ferramenta habilitada! O agente funcionará apenas no modo conversação.")
-
-        # Create a local OpenAI tools agent prompt (avoiding LangChain Hub dependency)
-        # This is the standard prompt structure for OpenAI tools agents
-        agent_prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a helpful assistant named BMO. Use the provided tools to help the user."),
-            ("placeholder", "{chat_history}"),
-            ("human", "{input}"),
-            ("placeholder", "{agent_scratchpad}")
-        ])
-        agent = create_openai_tools_agent(agent_llm, tools, agent_prompt)
-
-        tool_agent_chain = AgentExecutor(
-            agent=agent,
-            tools=tools,
-            verbose=llm_config.agent.verbose,
-            handle_parsing_errors=llm_config.agent.handle_parsing_errors,
-            max_iterations=llm_config.agent.max_iterations
-        )
-
-        # --- Structured Router ---
-        router_prompt = ChatPromptTemplate.from_template(
-            self.config.get_router_template()
-        )
-        structured_router = router_llm.with_structured_output(RouteQuery)
-        router_chain = router_prompt | structured_router
-
-        # --- Main Chain with Routing Logic ---
-        def route(info):
-            """Route to appropriate chain based on router decision."""
-            destination = info["destination"].destination.lower()
-            if "ferramentas" in destination:
-                return tool_agent_chain
-            else:
-                return conversation_chain
-
-        # Build the full chain with routing
-        full_chain = RunnablePassthrough.assign(
-            destination=lambda x: router_chain.invoke({
-                "input": x["input"],
-                "chat_history": x["chat_history"]
-            })
-        ) | RunnableLambda(lambda x: route(x).invoke(x))
+            full_chain = conversation_chain
+        else:
+            # Create a local OpenAI tools agent prompt
+            agent_prompt = ChatPromptTemplate.from_messages([
+                ("system", "You are a helpful assistant named BMO. Use the provided tools to help the user."),
+                ("placeholder", "{chat_history}"),
+                ("human", "{input}"),
+                ("placeholder", "{agent_scratchpad}")
+            ])
+            agent = create_openai_tools_agent(agent_llm, tools, agent_prompt)
+    
+            tool_agent_chain = AgentExecutor(
+                agent=agent,
+                tools=tools,
+                verbose=llm_config.agent.verbose,
+                handle_parsing_errors=llm_config.agent.handle_parsing_errors,
+                max_iterations=llm_config.agent.max_iterations
+            )
+    
+            # --- Structured Router ---
+            router_prompt = ChatPromptTemplate.from_template(
+                self.config.get_router_template()
+            )
+            structured_router = router_llm.with_structured_output(RouteQuery)
+            router_chain = router_prompt | structured_router
+    
+            # --- Main Chain with Routing Logic ---
+            def route(info):
+                """Route to appropriate chain based on router decision."""
+                destination = info["destination"].destination.lower()
+                if "ferramentas" in destination:
+                    return tool_agent_chain
+                else:
+                    return conversation_chain
+    
+            # Build the full chain with routing
+            full_chain = RunnablePassthrough.assign(
+                destination=lambda x: router_chain.invoke({
+                    "input": x["input"],
+                    "chat_history": x["chat_history"]
+                })
+            ) | RunnableLambda(lambda x: route(x).invoke(x))
 
         # --- Add Memory Management ---
         self.agent_with_chat_history = wrap_with_memory(full_chain)
