@@ -1,175 +1,117 @@
-# BMO Configuration File
-# Main configuration for the BMO voice assistant
-
-# Project metadata
-project:
-  name: "BMO"
-  version: "4.1"
-  user_name: "Miguel"
-
-# LLM Configuration
-llm:
-  mode: "cloud"  # Options: cloud, local, hybrid (tries local, falls back to cloud)
-
-  # Cloud provider configuration (Groq)
-  cloud:
-    provider: "groq"
-    model_name: "llama-3.1-8b-instant"
-
-  # Local provider configuration (Ollama)
-  local:
-    provider: "ollama"  # Options: ollama, llamacpp
-    model: "llama3.1:8b"  # Model name in Ollama
-    base_url: "http://localhost:11434"
-    timeout: 120  # Seconds
-
-  # Temperature settings for different use cases
-  temperatures:
-    router: 0.0      # Precise routing decisions
-    agent: 0.7       # Creative responses with tools
-    conversation: 0.7 # Natural conversation flow
-
-  # Agent execution settings
-  agent:
-    max_iterations: 5
-    verbose: true
-    handle_parsing_errors: true
-
-# Text-to-Speech Configuration
-tts:
-  engine: "piper"  # Options: google, coqui, piper, elevenlabs
-
-  google:
-    voice_name: "pt-BR-Chirp3-HD-Erinome"
-    language_code: "pt-BR"
-    audio_encoding: "MP3"
-
-  coqui:
-    model: "tts_models/multilingual/multi-dataset/xtts_v2"
-    voice_sample_path: "bmo_voice_sample.wav"
-    language: "pt"
-    split_sentences: true
-
-  piper:
-    voice: "/home/miguel/.local/share/piper_tts/pt_BR-faber-medium.onnx"  # Vozes disponíveis:
-    # - pt_BR-faber-medium.onnx (voz masculina mais neutra)
-    # - pt_BR-edresson-low.onnx (voz masculina mais jovem, pode soar mais empolgada)
-    quality: "medium"  # Options: low, medium, high
-    speaker: null  # For multi-speaker models
-    length_scale: 0.85  # Speed (1.0=normal, <1=faster, >1=slower) - 0.85 = 15% mais rápido e empolgado
-
-  elevenlabs:
-    voice_id: ""  # Configure if using ElevenLabs
-
-# Speech-to-Text Configuration
-stt:
-  mode: "cloud"  # Options: cloud, local, hybrid
-
-  # Cloud provider (Groq Whisper API)
-  cloud:
-    provider: "groq"
-    model: "whisper-large-v3"
-    language: "pt"
-
-  # Local provider (faster-whisper)
-  local:
-    provider: "faster-whisper"  # Options: faster-whisper, whisper
-    model: "medium"  # Options: tiny, base, small, medium, large-v3 (medium = melhor equilíbrio)
-    device: "cpu"  # Options: cpu, cuda
-    compute_type: "int8"  # Options: int8, float16, float32
-    language: "pt"
-    beam_size: 5  # Decoding beam size (higher=better quality, slower)
-
-# Wake Word Detection
-wake_word:
-  model_path: "custom_models/wake_word/Talos.onnx"
-  threshold: 0.5
-  inference_framework: "onnx"
-
-  # Audio settings for wake word detection
-  audio:
-    sample_rate: 16000
-    chunk_size: 1280  # 80ms at 16kHz
-    channels: 1
-    format: "int16"
-
-# Audio Recording Settings
-recording:
-  duration_seconds: 5  # Fallback if VAD is disabled
-  sample_rate: 16000
-  channels: 1
-  chunk_size: 1280
-  format: "int16"
-
-  # Audio device selection (use list_audio_devices.py to find indices)
-  input_device_index: null   # null = default input, or specify device index (e.g., 0, 1, 2)
-  output_device_index: null  # null = default output, or specify device index
-
-  # Buffer management
-  buffer_clear_duration_ms: 500
-
-  # Voice Activity Detection (VAD)
-  vad:
-    enabled: true
-    threshold: 0.4  # Speech probability threshold (0.0 - 1.0) - Mais sensível
-    min_speech_duration_ms: 200  # Minimum speech duration to start recording
-    min_silence_duration_ms: 900  # Silence duration to stop recording - Espera mais para não cortar
-    max_recording_seconds: 30  # Maximum recording duration (safety limit)
-    speech_pad_ms: 400  # Padding before speech starts - Mais contexto no início
-
-# Tools Configuration (Enable/Disable features)
-tools:
-  spotify:
-    enabled: false  # Set to false to disable Spotify integration
-  google_calendar:
-    enabled: false  # Set to false to disable Google Calendar
-  google_search:
-    enabled: false  # Set to false to disable Google Search
-
-# Spotify Integration
-spotify:
-  scope: "user-modify-playback-state,user-read-playback-state,user-read-currently-playing"
-  redirect_uri: "http://127.0.0.1:9090"
-
-# Google Calendar Integration
 google_calendar:
-  credentials_file: "credentials/credentials.json"
-  token_file: "credentials/token.json"
+  credentials_file: credentials/credentials.json
   scopes:
-    - "https://www.googleapis.com/auth/calendar.readonly"
-
-# Google Cloud Configuration
-google_cloud:
-  adc_credentials_file: "credentials/google_adc_credentials.json"
-
-# Flask Server Configuration
-server:
-  host: "0.0.0.0"
-  port: 5000
-  debug: false
-
-# LangChain Settings
-langchain:
-  tracing_v2: false
-  api_key: ""
-  endpoint: "https://api.smith.langchain.com"
-  project: "bmo_project"
-
-# Paths Configuration
-paths:
-  base_dir: "."  # Will be set programmatically
-  temp_audio: "temp_question.wav"
-  response_audio_mp3: "response.mp3"
-  response_audio_wav: "response.wav"
-  web_folder: "web"
-  custom_models: "custom_models"
-
-# Hardware Settings (for Raspberry Pi deployments)
+  - https://www.googleapis.com/auth/calendar.readonly
+  token_file: credentials/token.json
 hardware:
-  enabled: false
-  gpio_led_pin: null
   display:
     enabled: false
-    type: null  # e.g., "ssd1306", "st7789"
-    width: 128
     height: 64
+    type: null
+    width: 128
+  enabled: false
+  gpio_led_pin: null
+langchain:
+  api_key: ''
+  endpoint: https://api.smith.langchain.com
+  project: bmo_project
+  tracing_v2: false
+llm:
+  agent:
+    handle_parsing_errors: true
+    max_iterations: 5
+    verbose: true
+  cloud:
+    model_name: llama-3.1-8b-instant
+    provider: groq
+  local:
+    airllm:
+      compression: null
+      hf_repo: Qwen/Qwen1.5-1.8B-Chat
+      max_length: 128
+    base_url: http://localhost:11434
+    model: qwen2:1.5b
+    provider: ollama
+    timeout: 120
+  mode: local
+  temperatures:
+    agent: 0.7
+    conversation: 0.7
+    router: 0.0
+paths:
+  base_dir: .
+  custom_models: custom_models
+  response_audio_mp3: response.mp3
+  response_audio_wav: response.wav
+  temp_audio: temp_question.wav
+  web_folder: web
+project:
+  name: BMO
+  user_name: Miguel
+  version: '4.1'
+recording:
+  buffer_clear_duration_ms: 500
+  channels: 1
+  chunk_size: 1280
+  duration_seconds: 5
+  format: int16
+  input_device_index: null
+  output_device_index: null
+  sample_rate: 16000
+  vad:
+    enabled: true
+    max_recording_seconds: 30
+    min_silence_duration_ms: 900
+    min_speech_duration_ms: 200
+    speech_pad_ms: 400
+    threshold: 0.4
+server:
+  debug: false
+  host: 0.0.0.0
+  port: 5000
+spotify:
+  redirect_uri: http://127.0.0.1:9090
+  scope: user-modify-playback-state,user-read-playback-state,user-read-currently-playing
+stt:
+  cloud:
+    language: pt
+    model: whisper-large-v3
+    provider: groq
+  local:
+    beam_size: 5
+    compute_type: int8
+    device: cpu
+    language: pt
+    model: medium
+    provider: faster-whisper
+  mode: local
+tools:
+  google_calendar:
+    enabled: false
+  google_search:
+    enabled: false
+  spotify:
+    enabled: false
+tts:
+  coqui:
+    language: pt
+    model: tts_models/multilingual/multi-dataset/xtts_v2
+    split_sentences: true
+    voice_sample_path: bmo_voice_sample.wav
+  elevenlabs:
+    voice_id: ''
+  engine: piper
+  piper:
+    length_scale: 0.85
+    quality: medium
+    speaker: null
+    voice: /home/miguel/.local/share/piper_tts/pt_BR-faber-medium.onnx
+wake_word:
+  audio:
+    channels: 1
+    chunk_size: 1280
+    format: int16
+    sample_rate: 16000
+  inference_framework: onnx
+  model_path: custom_models/wake_word/Talos.onnx
+  threshold: 0.3
